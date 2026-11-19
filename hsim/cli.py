@@ -58,8 +58,8 @@ def main():
 def new(save, start, seed, name, gender, birth, background, attracted_to, bio, data_pack, historical):
     """Create a new world and protagonist."""
     if historical and not data_pack:
-        from .core.config import ROOT, load_config
-        data_pack = str(ROOT / load_config()["history"]["default_pack"])
+        from .core.config import load_config
+        data_pack = load_config()["history"]["default_pack"]      # stored relative to the project
     params = {"seed": seed, "start": start, "data_pack": data_pack,
               "player": {"name": name, "gender": gender, "birth": birth, "background": background}}
     if attracted_to:
