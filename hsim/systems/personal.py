@@ -246,6 +246,13 @@ def _documented_events(st, cfg) -> None:
                 why = "they never crossed paths in this timeline" if not ok else "they met through other channels"
             elif not free:
                 ok, why = False, "one of them was already committed elsewhere in this timeline"
+        elif ev.type == "marriage_outside":
+            p = people[0]
+            ok = p.partner_status is None
+            why = "documented (spouse outside the simulated industry)" if ok else "already committed elsewhere in this timeline"
+        elif ev.type == "divorce_outside":
+            ok = people[0].partner_status == "married_offscreen"
+            why = "documented" if ok else "not married to that spouse in this timeline"
         elif kind == "relationship" and ev.type == "divorce":
             a, b = people[0], people[1]
             r = st.rel(a.id, b.id, create=False)
@@ -282,6 +289,10 @@ def _apply_documented(st, cfg, ev, people) -> None:
         r.history.append({"date": st.date, "text": "married", "delta": 10, "documented": True})
         for x, y in ((a, b), (b, a)):
             x.partner_id, x.partner_status = y.id, "married"
+    elif ev.type == "marriage_outside":
+        people[0].partner_status = "married_offscreen"
+    elif ev.type == "divorce_outside":
+        people[0].partner_status = None
     elif ev.type == "divorce":
         a, b = people
         r = st.rel(a.id, b.id)
@@ -290,7 +301,7 @@ def _apply_documented(st, cfg, ev, people) -> None:
         for x in (a, b):
             x.partner_id, x.partner_status = None, None
     famous = max(p.fame for p in people) > 0.05
-    st.log("documented_" + ev.type, ev.summary, actors=ev.people, salience=2 if famous else 1, public=True,
+    st.log("documented_" + ev.type.replace("_outside", ""), ev.summary, actors=ev.people, salience=2 if famous else 1, public=True,
            data={"event": ev.id, "verification": ev.verification, "sources": ev.sources})
 
 

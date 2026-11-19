@@ -114,6 +114,7 @@ class Role:
     audition_date: str | None = None
     auditioners: list = field(default_factory=list)
     performance: float | None = None  # HIDDEN until reviews
+    intended: str | None = None       # historical attachment (a prior, not a guarantee)
 
 
 @dataclass

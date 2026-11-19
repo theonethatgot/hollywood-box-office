@@ -291,10 +291,13 @@ def new_world(cfg: dict, seed: int, start: str, data_pack: dict | None = None) -
         st.agencies[a["id"]] = M.Agency(id=a["id"], name=a["name"], tier=a["tier"], hustle=a["hustle"],
                                         negotiation=a["negotiation"], info_quality=a["info"])
 
-    for i in range(cfg["world"]["generated_actors"]):
+    w = cfg["world"]
+    n_act = w["generated_actors_with_history"] if data_pack else w["generated_actors"]
+    n_dir = w["generated_directors_with_history"] if data_pack else w["generated_directors"]
+    for i in range(n_act):
         p = make_actor(st, cfg, f"{i:05d}", start)
         st.people[p.id] = p
-    for i in range(cfg["world"]["generated_directors"]):
+    for i in range(n_dir):
         p = make_director(st, cfg, f"{i:05d}", start)
         st.people[p.id] = p
     if data_pack:
@@ -306,6 +309,7 @@ def new_world(cfg: dict, seed: int, start: str, data_pack: dict | None = None) -
     horizon = cfg["world"]["pipeline_months"]
     for sid, studio in sorted(st.studios.items()):
         n = int(round(studio.slate_per_year * (horizon + 3) / 12))
+        n = max(0, n - st.market.get("historical_slate", {}).get(sid, 0) * 2)   # real films fill part of the slate
         g = R.stream(seed, "pipeline", sid)
         for k in range(n):
             rel = add_days(start, int(g.integers(-63, horizon * 30)))

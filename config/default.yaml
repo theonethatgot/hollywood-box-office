@@ -4,6 +4,8 @@
 
 world:
   generated_actors: 1400          # fictional working/aspiring actors at start
+  generated_actors_with_history: 700   # when a historical pack supplies the real population
+  generated_directors_with_history: 80
   generated_directors: 240
   actor_gender_share_m: 0.56
   new_actors_per_year: 110        # fictional debutants entering the pool
@@ -28,6 +30,7 @@ studios:                            # historical studios active in 1980 (names o
   - {id: st-ori, name: Orion Pictures, tier: mini, slate: 9, budget_median: 7.5, risk: 60}
   - {id: st-avc, name: AVCO Embassy Pictures, tier: mini, slate: 9, budget_median: 4.0, risk: 65}
   - {id: st-nw,  name: New World Pictures, tier: mini, slate: 10, budget_median: 1.5, risk: 70}
+  - {id: st-ind, name: Independent distributors, tier: mini, slate: 0, budget_median: 2.5, risk: 70}
 
 agencies:
   - {id: ag-wma, name: William Morris Agency, tier: 1, hustle: 60, negotiation: 70, info: 70}
@@ -175,6 +178,22 @@ personal:
   divorce_weekly_base: 0.0012
   documented_protection: 1.0       # 1 = documented marriages only end via documented events or divergence
   fictional_mortality_gompertz: {a: 0.00002, b: 0.085}
+
+history:                            # historical snapshot loader (hsim/world/historical.py)
+  default_pack: data/history/wikidata_1975_1984.json
+  lookback_years: 5               # credits in this window put a person in the world
+  horizon_months: 24              # real films released within this window become pipeline projects
+  in_release_weeks: 9             # real films released this recently are in theatres at start
+  max_billing: 8
+  min_age: 8
+  recency_years: 4
+  hindsight_weight: 0.5           # 0 = hidden talent judged only on pre-start record
+  talent_noise_sd: 9              # success is evidence, not destiny
+  tier_a_count: 400
+  events_horizon_years: 10
+  marriage_base_rate_if_never_met: 0.3
+  sequel_hook_bonus: 12
+  intended_role_bonus: 0.6        # an actor's documented pull toward a project they historically made
 
 advance:
   max_weeks_per_call: 520

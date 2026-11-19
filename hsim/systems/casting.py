@@ -96,11 +96,26 @@ def casting_utility(st: WorldState, cfg, proj: M.Project, role: M.Role, p: M.Per
             - 25 * max(0.0, cost_ratio - 1.2) + taste)
 
 
+_INDEX: dict = {}
+
+
+def _actor_index(st: WorldState) -> dict:
+    """Actors by gender, rebuilt once per simulated week (cheap pre-filter)."""
+    key = (st.date, len(st.people))
+    if _INDEX.get("world") is not st or _INDEX.get("key") != key:   # identity check: ids can be reused
+        by = {}
+        for p in st.actors():
+            by.setdefault(p.gender, []).append(p)
+        _INDEX.clear()
+        _INDEX.update({"world": st, "key": key, "by_gender": by})
+    return _INDEX["by_gender"]
+
+
 def candidate_pool(st: WorldState, cfg, proj: M.Project, role: M.Role) -> list:
     start, end = window(proj)
     cast_ids = {st.roles[r].cast_id for r in proj.role_ids if st.roles[r].cast_id}
     out = []
-    for p in st.actors():
+    for p in _actor_index(st).get(role.gender, []):
         if p.gender != role.gender or p.id in cast_ids or p.id in role.tried:
             continue
         age = age_on(p.birth, st.date)
@@ -189,6 +204,16 @@ def step(st: WorldState, cfg) -> None:
 
 
 def _start_casting(st: WorldState, cfg, proj: M.Project, role: M.Role) -> None:
+    if role.intended and role.intended not in role.tried:
+        # documented attachment: the producers go to the historical choice first
+        person = st.people.get(role.intended)
+        if person and person.active and not person.death and available(person, *window(proj), ignore_project=proj.id):
+            make_offer(st, cfg, proj, role, person, path="long-standing attachment")
+            return
+        role.tried.append(role.intended)
+        if person:
+            st.log("history_diverged", f"(Divergence) {person.name} is not available for '{proj.title}'; the role is being recast.",
+                   actors=[person.id], refs={"project": proj.id}, salience=1, public=person.fame > 0.1)
     pool = candidate_pool(st, cfg, proj, role)
     if not pool:
         return
@@ -394,7 +419,7 @@ def _respond(st, cfg, off: M.Offer, choice: str, delegated: str | None = None, n
     proj, role = st.projects[off.project_id], st.roles[off.role_id]
     p = st.people[off.person_id]
     if choice == "accept":
-        if not available(p, *window(proj)):
+        if not available(p, *window(proj), ignore_project=proj.id):
             choice = "decline"
         else:
             off.status = "accepted"
@@ -404,6 +429,7 @@ def _respond(st, cfg, off: M.Offer, choice: str, delegated: str | None = None, n
                 st.delegated.append({"rule": delegated, "decision": None, "text": text})
             return text
     off.status = "declined"
+    p.calendar = [c for c in p.calendar if c["project_id"] != proj.id]   # release any hold
     _reopen(st, cfg, proj, role, p)
     if p.controller == "player" or p.fame > 0.15:
         st.log("offer_declined", f"{p.name} turned down {role.name} in '{proj.title}'.", actors=[p.id],
@@ -428,7 +454,7 @@ def _reopen(st, cfg, proj, role, p) -> None:
 # -------------------------------------------------------- actor's utility ---
 def accept_utility(st: WorldState, cfg, proj: M.Project, role: M.Role, p: M.Person, fee: float) -> float:
     """How much an actor wants a role. Used by NPCs and by delegated player choices."""
-    if not available(p, *window(proj)):
+    if not available(p, *window(proj), ignore_project=proj.id):
         return -99.0
     g = R.stream(st.seed, "script-read", proj.id, p.id)
     ag = st.agencies.get(p.agent_id) if p.agent_id else None
@@ -451,6 +477,8 @@ def accept_utility(st: WorldState, cfg, proj: M.Project, role: M.Role, p: M.Pers
         idle = 1.0
     gl = p.goals or {"money": 0.3, "fame": 0.2, "prestige": 0.2, "art": 0.2, "stability": 0.1}
     star_drop = -0.6 if (p.bankability > 60 and role.importance == "supporting") else 0.0
+    if role.intended == p.id:
+        star_drop += cfg["history"]["intended_role_bonus"]
     return (gl.get("money", 0.2) * 2.0 * money_term + gl.get("fame", 0.2) * 1.2 * size
             + gl.get("prestige", 0.2) * ((dir_pres - 30) / 40 + (script_obs - 50) / 40)
             + gl.get("art", 0.2) * (script_obs - 50) / 30 + gl.get("stability", 0.1) * 0.5

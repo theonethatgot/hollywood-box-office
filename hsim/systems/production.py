@@ -57,13 +57,10 @@ def _try_start(st, cfg, p) -> None:
     p.shoot_end = add_weeks(p.shoot_start, p.shoot_weeks)
     if p.delays > 8:
         p.stage = "dead"
-        for r in roles:
-            if r.cast_id:
-                person = st.people[r.cast_id]
-                person.calendar = [c for c in person.calendar if c["project_id"] != p.id]
-        if p.director_id:
-            d = st.people[p.director_id]
-            d.calendar = [c for c in d.calendar if c["project_id"] != p.id]
+        ids = {r.cast_id for r in roles if r.cast_id} | {r.intended for r in roles if r.intended} | {p.director_id}
+        for pid_ in sorted(i for i in ids if i):
+            person = st.people[pid_]
+            person.calendar = [c for c in person.calendar if c["project_id"] != p.id]
         st.log("shelved", f"{st.studios[p.studio_id].name} shelved '{p.title}' after casting stalled.",
                refs={"project": p.id}, salience=1)
     else:

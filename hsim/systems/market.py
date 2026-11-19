@@ -7,15 +7,16 @@ from ..core.util import week_of_year, year
 BASE_YEAR = 1980
 
 
-_INFL: dict = {}
+_INFL: dict = {"cfg": None, "vals": {}}
 
 
 def infl(cfg: dict, yr: int) -> float:
     """Nominal-dollar multiplier relative to 1980 dollars (config amounts are 1980 $)."""
-    key = (id(cfg), yr)
-    v = _INFL.get(key)
+    if _INFL["cfg"] is not cfg:          # identity, not id(): ids can be reused after GC
+        _INFL["cfg"], _INFL["vals"] = cfg, {}
+    v = _INFL["vals"].get(yr)
     if v is None:
-        v = _INFL[key] = era_value(cfg, "cpi", yr) / era_value(cfg, "cpi", BASE_YEAR)
+        v = _INFL["vals"][yr] = era_value(cfg, "cpi", yr) / era_value(cfg, "cpi", BASE_YEAR)
     return v
 
 
