@@ -142,6 +142,9 @@ def _player_intent(st, cfg, prop, g) -> dict:
         if pool and g.random() < chance:
             ag = pool[int(g.integers(len(pool)))]
             pl.agent_id = ag.id
+            pl.agent_person_id = None
+            from ..world import people as PEOPLE
+            PEOPLE.assign_agent_people(st)
             st.log("new_agent", f"You signed with {ag.name}.", actors=[pl.id], salience=3, public=False)
             return _rule(prop, "accepted", f"{ag.name} agreed to represent you.")
         return _rule(prop, "declined", "The agencies you approached passed for now.")

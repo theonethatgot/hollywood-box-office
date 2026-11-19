@@ -18,6 +18,7 @@ REGISTRIES = {
     "decisions": M.Decision,
     "rels": M.Relationship,
     "hist_events": M.HistoricalEvent,
+    "shows": M.Show,
 }
 
 
@@ -39,6 +40,7 @@ class WorldState:
     decisions: dict = field(default_factory=dict)
     rels: dict = field(default_factory=dict)
     hist_events: dict = field(default_factory=dict)
+    shows: dict = field(default_factory=dict)
     orders: dict = field(default_factory=dict)       # player's standing orders
     notes: list = field(default_factory=list)        # narrator notes (non-mechanical canon)
     rulings: list = field(default_factory=list)      # adjudication results not yet packeted
@@ -117,10 +119,21 @@ class WorldState:
     def player(self) -> M.Person | None:
         return self.people.get(self.player_id) if self.player_id else None
 
+    def _cached(self, name, pred):
+        """Per-week memo of sorted people lists (not serialised; rebuilt when date/population change)."""
+        cache = self.__dict__.setdefault("_memo", {})
+        key = (name, self.date, len(self.people))
+        hit = cache.get(name)
+        if hit and hit[0] == key:
+            return hit[1]
+        lst = [p for _, p in sorted(self.people.items()) if pred(p)]
+        cache[name] = (key, lst)
+        return lst
+
     def actors(self):
-        return [p for _, p in sorted(self.people.items())
-                if "actor" in p.roles and p.active and p.death is None]
+        return [p for p in self._cached("actors", lambda p: "actor" in p.roles)
+                if p.active and p.death is None]
 
     def directors(self):
-        return [p for _, p in sorted(self.people.items())
-                if "director" in p.roles and p.active and p.death is None]
+        return [p for p in self._cached("directors", lambda p: "director" in p.roles)
+                if p.active and p.death is None]

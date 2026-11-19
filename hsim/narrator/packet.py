@@ -9,7 +9,7 @@ from __future__ import annotations
 import yaml
 
 from ..core.state import WorldState
-from ..core.util import age_on, days_between, money
+from ..core.util import add_days, age_on, days_between, money
 from ..systems import decisions as D
 
 RULES = """You are the narrator of a Hollywood career simulation. The engine is the authority.
@@ -102,9 +102,13 @@ def build(st: WorldState, cfg: dict, packet_id: str) -> dict:
         "state_hash": st.state_hash(),
         "protagonist": _protagonist(st, cfg) if pl else None,
         "canon": [{"id": f"ev-{e['seq']}", "date": e["date"], "text": e["text"]} for e in canon],
+        "period_summary": _period_summary(st, cfg, new_events),
         "rulings": list(st.rulings),
         "delegated": [x["text"] for x in st.delegated],
-        "your_projects": _projects(st, cfg),
+        "career_activity": _career_activity(st, cfg, new_events),
+        "your_work": _projects(st, cfg) + _jobs(st),
+        "network": _network(st, cfg),
+        "open_threads": _threads(st, cfg),
         "people": _people(st, cfg, canon),
         "industry": {
             "box_office_chart": _chart(st),
@@ -137,7 +141,10 @@ def _protagonist(st, cfg) -> dict:
         "industry_view": {"momentum": heat_label(p.heat), "draw": bank_label(p.bankability),
                           "critics": critic_label(p.critical_rep) if _reviewed(st, p) else "no reviewed work yet"},
         "quote_reported_in_trades": money(p.quote) if p.quote else "no established quote",
-        "agent": ag.name if ag else "no agent",
+        "agent": (f"{st.people[p.agent_person_id].name} at {ag.name}" if ag and p.agent_person_id in st.people
+                  else ag.name if ag else "no agent"),
+        "agent_strategy": _strategy(p) if ag else "no representation: work comes only through open calls",
+        "persona": {k: v for k, v in p.persona.items() if k != "source"},
         "money": {"cash": round(p.cash, 0), "monthly_costs": round(p.monthly_costs, 0)},
         "energy": energy_label(p.energy),
         "relationship_status": (f"{p.partner_status} {partner.name}" if partner else (p.partner_status or "single")),
@@ -167,6 +174,15 @@ def _projects(st, cfg) -> list:
                 "your_role": f"{r.name} — {r.importance}: {r.description}",
                 "director": d.name if d else "TBD", "costars": costars, "stage": p.stage,
                 "location": p.location, "terms": money(r.fee) + (f" + {r.points:g} {r.points_type} points" if r.points_type else "")}
+        if p.tone:
+            item["identity"] = f"{p.tone} {p.genre}; {p.logline_extra}"
+        if p.historical_ref:
+            item["historical_record"] = {
+                "real_film": True,
+                "release_date": "approximate (only the year or month is documented)" if p.date_approx else "documented",
+                "distributor": p.distributor_note or st.studios[p.studio_id].name,
+                "your_character_name": "documented" if r.name_documented else "simulated (not in the record)",
+                "note": "You are in this real film because the simulated world diverged from history." }
         if p.stage in ("prepro", "shooting"):
             item["shoot"] = f"{p.shoot_start} to {p.shoot_end}"
         if p.release_date:
@@ -202,9 +218,17 @@ def _people(st, cfg, canon) -> list:
         if prj:
             ids += [prj.director_id] if prj.director_id else []
             ids += [st.roles[r].cast_id for r in prj.role_ids if st.roles[r].cast_id]
-    rels = sorted((r for r in st.rels.values() if pl.id in (r.a, r.b) and (abs(r.affinity) >= 20 or r.status not in ("acquainted",))),
-                  key=lambda r: -abs(r.affinity))
-    ids += [r.b if r.a == pl.id else r.a for r in rels[:6]]
+    if pl.agent_person_id:
+        ids.insert(0, pl.agent_person_id)
+    for j in st.market.get("jobs", []):
+        if j["person"] == pl.id:
+            ids += [c for c in j.get("colleagues", [])][:5]
+    for e in st.events[st.packet_seq_mark:]:
+        if pl.id in e["actors"]:
+            ids += [a for a in e["actors"] if a != pl.id]
+    rels = sorted((r for r in st.rels.values() if pl.id in (r.a, r.b) and (r.history or r.contact_weeks)),
+                  key=lambda r: (r.history[-1]["date"] if r.history else "", abs(r.affinity)), reverse=True)
+    ids += [r.b if r.a == pl.id else r.a for r in rels[:8]]
     seen, out = set(), []
     for i in ids:
         if i in seen or i not in st.people or i == pl.id:
@@ -229,23 +253,162 @@ def motivation(p) -> str:
     return f"driven mostly by {MOTIVE[top[0][0]]}, and also by {MOTIVE[top[1][0]]}"
 
 
+def _profession(st, p) -> str:
+    if "agent" in p.roles:
+        ag = st.agencies.get(p.employer)
+        return f"agent at {ag.name}" if ag else "agent"
+    if "casting_director" in p.roles:
+        return (f"casting director at {st.studios[p.employer].name}" if p.employer in st.studios
+                else "independent casting director")
+    if "producer" in p.roles:
+        return "television producer"
+    if "director" in p.roles and "actor" in p.roles:
+        return "actor-director"
+    return "director" if "director" in p.roles else "actor"
+
+
 def _person_card(st, p) -> dict:
+    from ..world.people import ambition, reputation
     pl = st.player
     r = st.rel(pl.id, p.id, create=False)
-    prof = "director" if "director" in p.roles else "actor"
-    recent = [c for c in p.credits if c.get("kind") in ("film", "prior")][-3:]
-    card = {"id": p.id, "name": p.name, "age": age_on(p.birth, st.date), "profession": prof,
-            "public_profile": fame_label(p.fame), "traits": p.traits, "motivation": motivation(p), "bio": p.bio,
-            "recent_work": [f"'{c['title']}' ({c['year']}, {c['role']})" for c in recent],
-            "relationship_status": ("married (outside the industry)" if p.partner_status == "married_offscreen"
-                                    else (f"{p.partner_status} {st.people[p.partner_id].name}" if p.partner_id in st.people
-                                          else "single"))}
+    recent = [c for c in p.credits if c.get("kind") in ("film", "prior", "job")][-3:]
+    card = {"id": p.id, "name": p.name, "age": age_on(p.birth, st.date), "profession": _profession(st, p),
+            "public_profile": fame_label(p.fame), "reputation": reputation(st, p),
+            "traits": p.traits, "motivation": motivation(p), "ambition": ambition(p), "bio": p.bio}
+    persona = {k: v for k, v in p.persona.items() if k != "source"}
+    if persona:
+        card["persona"] = persona
+    if recent:
+        card["recent_work"] = [f"'{c['title']}' ({c['year']}, {c['role']})" for c in recent]
+    card["relationship_status"] = ("married (outside the industry)" if p.partner_status == "married_offscreen"
+                                   else (f"{p.partner_status} {st.people[p.partner_id].name}" if p.partner_id in st.people
+                                         else "single"))
     if p.historical:
         card["real_person"] = True
+        card["note"] = "Real person: portray consistently with their documented career; personality is a simulation characterisation."
     if r:
         card["with_you"] = {"standing": affinity_label(r.affinity), "status": r.status,
                             "history": [h["text"] + f" ({h['date']})" for h in r.history[-4:]]}
     return card
+
+
+def _strategy(p) -> str:
+    from ..systems.agents import strategy_summary
+    return strategy_summary(p)
+
+
+def _period_summary(st, cfg, new_events) -> dict:
+    pl = st.player
+    mine = [e for e in new_events if pl.id in e["actors"]]
+    subs = [x for x in st.market.get("player_submissions", []) if new_events and x["date"] >= new_events[0]["date"]]
+    kinds = {}
+    for e in mine:
+        kinds[e["type"]] = kinds.get(e["type"], 0) + 1
+    weeks = max(1, days_between(new_events[0]["date"], st.date) // 7) if new_events else 0
+    work = kinds.get("job_booked", 0) + kinds.get("cast", 0)
+    auditions = kinds.get("audition_result", 0)
+    quiet = work == 0 and auditions == 0 and not D.pending(st)
+    pieces = [f"{weeks} week(s)", f"{len(subs)} submission(s) by your agent",
+              f"{sum(1 for x in subs if x['status'] in ('called in', 'requested'))} call-in(s)",
+              f"{auditions} audition(s)", f"{work} booking(s)"]
+    ledger = [x for x in st.market.get("player_ledger", []) if new_events and x["date"] >= new_events[0]["date"]]
+    net = sum(x.get("net", 0) for x in ledger)
+    return {"overview": ", ".join(pieces) + f"; net money {'+' if net >= 0 else ''}{money(net)}.",
+            "quiet_period": quiet,
+            "note": ("A quiet stretch: realistic downtime. Portray ordinary life, waiting and small moments; "
+                     "do not invent career breakthroughs.") if quiet else ""}
+
+
+def _career_activity(st, cfg, new_events) -> dict:
+    from ..systems.jobbing import describe
+    pl = st.player
+    start = new_events[0]["date"] if new_events else st.date
+    subs = [x for x in st.market.get("player_submissions", []) if x["date"] >= start]
+    out = {}
+    if subs:
+        out["submissions"] = [f"{x['date']}: {x['role']} ({x['importance']}) in '{x['title']}' ({x['studio']}"
+                              + (f", casting {x['cd']}" if x['cd'] else "") + f") — {x['status']}: {x['reason']}"
+                              for x in subs[-10:]]
+    aud = [e for e in new_events if pl.id in e["actors"] and e["type"] in ("audition_result", "audition_rivals", "called_in")]
+    if aud:
+        out["auditions"] = [f"{e['date']}: {e['text']}" for e in aud[-8:]]
+    booked = [j for j in st.market.get("jobs", []) + st.market.get("jobs_done", [])
+              if j["person"] == pl.id and j.get("booked", "") >= start]
+    if booked:
+        out["bookings"] = [f"{j['start']} to {j['end']}: {describe(st, j)} ({money(j['pay'])})" for j in booked]
+    calls = [e for e in new_events if pl.id in e["actors"] and e["type"] == "agent_checkin"]
+    if calls:
+        out["agent_calls"] = [f"{e['date']}: {e['text']}" for e in calls]
+    return out
+
+
+def _jobs(st) -> list:
+    from ..systems.jobbing import describe
+    out = []
+    for j in st.market.get("jobs", []):
+        if j["person"] != st.player_id:
+            continue
+        status = "under way" if j["start"] <= st.date else "booked"
+        item = {"title": j.get("show") or j.get("film") or j.get("play") or j["name"], "kind": j["kind"].replace("_", " "),
+                "status": status, "dates": f"{j['start']} to {j['end']}", "details": describe(st, j),
+                "pay": money(j["pay"])}
+        if j.get("format"):
+            item["format"] = j["format"]
+        out.append(item)
+    return out
+
+
+def _network(st, cfg) -> list:
+    pl = st.player
+    rows = []
+    for r in st.rels.values():
+        if pl.id not in (r.a, r.b) or not (r.history or r.contact_weeks):
+            continue
+        other = st.people.get(r.b if r.a == pl.id else r.a)
+        if not other:
+            continue
+        first = r.history[0]["text"] if r.history else "met"
+        last = r.history[-1] if r.history else None
+        rows.append((last["date"] if last else "", {
+            "name": other.name, "id": other.id, "who": _profession(st, other),
+            "how_you_know_them": first, "standing": affinity_label(r.affinity),
+            "last_interaction": f"{last['text']} ({last['date']})" if last else ""}))
+    rows.sort(key=lambda x: x[0], reverse=True)
+    return [x for _, x in rows[:15]]
+
+
+def _threads(st, cfg) -> list:
+    from ..systems.jobbing import describe
+    pl = st.player
+    out = []
+    for d in D.pending(st):
+        out.append(f"Decision waiting: {d.summary} (by {d.deadline})")
+    for j in st.market.get("jobs", []):
+        if j["person"] == pl.id and j["start"] > st.date:
+            out.append(f"Upcoming: {describe(st, j)} starting {j['start']}")
+    for pid, p in sorted(st.projects.items()):
+        mine = [st.roles[r] for r in p.role_ids if st.roles[r].cast_id == pl.id]
+        if mine and p.stage in ("prepro", "shooting", "post", "awaiting_release"):
+            out.append(f"'{p.title}' is in {p.stage.replace('_', ' ')}" + (f"; release {p.release_date}" if p.release_date else ""))
+    yr = st.date[:4]
+    year_subs = [x for x in st.market.get("player_submissions", []) if x["date"][:4] == yr]
+    year_roles = [c for c in pl.credits if c.get("kind") == "film" and str(c.get("year")) >= yr]
+    top_goal = max(pl.goals, key=pl.goals.get) if pl.goals else None
+    if top_goal:
+        from ..world.people import GOAL_AMBITION
+        out.append(f"Career goal: {GOAL_AMBITION[top_goal].replace('wants', 'you want')}. So far in {yr}: "
+                   f"{len(year_subs)} submissions, {sum(1 for x in year_subs if x['status'] in ('called in', 'requested'))} "
+                   f"call-ins, {len(year_roles)} film role(s) booked.")
+    if pl.cash < 2 * pl.monthly_costs:
+        out.append(f"Money is tight: about {money(pl.cash)} against {money(pl.monthly_costs)} a month in costs.")
+    if not pl.agent_id:
+        out.append("No agent: work arrives only through open calls; finding representation is the main obstacle.")
+    recent_shift = [r for r in st.rels.values() if pl.id in (r.a, r.b) and r.history and abs(r.history[-1].get("delta", 0)) >= 5
+                    and r.history[-1]["date"] >= add_days(st.date, -35)]
+    for r in recent_shift[:3]:
+        other = st.people[r.b if r.a == pl.id else r.a]
+        out.append(f"Relationship in motion with {other.name}: {r.history[-1]['text']}")
+    return out
 
 
 def _chart(st) -> list:

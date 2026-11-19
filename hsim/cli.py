@@ -50,12 +50,16 @@ def main():
 @click.option("--name", default="Alex Reyes", show_default=True)
 @click.option("--gender", type=click.Choice(["m", "f"]), default="f", show_default=True)
 @click.option("--birth", default="1957-04-12", show_default=True)
-@click.option("--background", type=click.Choice(["unknown", "working", "star"]), default="unknown", show_default=True)
+@click.option("--background", type=click.Choice(["unknown", "working", "notable", "star"]), default="unknown", show_default=True,
+              help="Career position: unknown, working actor, notable (recognisable, established), or star.")
 @click.option("--attracted-to", default=None, help="Comma list of m,f (protagonist's own orientation).")
 @click.option("--bio", default=None)
+@click.option("--goals", default=None, help="Career priorities, e.g. 'prestige=4,art=3,money=2,fame=1,stability=1'.")
+@click.option("--hometown", default=None)
+@click.option("--training", default=None, help="Background, e.g. 'trained at a New York acting studio'.")
 @click.option("--data-pack", default=None, help="Historical data pack JSON (see datapipe/).")
 @click.option("--historical/--fictional", default=False, help="Use the default historical pack (real people and films).")
-def new(save, start, seed, name, gender, birth, background, attracted_to, bio, data_pack, historical):
+def new(save, start, seed, name, gender, birth, background, attracted_to, bio, goals, hometown, training, data_pack, historical):
     """Create a new world and protagonist."""
     if historical and not data_pack:
         from .core.config import load_config
@@ -66,6 +70,12 @@ def new(save, start, seed, name, gender, birth, background, attracted_to, bio, d
         params["player"]["attracted_to"] = attracted_to.split(",")
     if bio:
         params["player"]["bio"] = bio
+    if goals:
+        params["player"]["goals"] = {k.strip(): float(v) for k, v in (x.split("=") for x in goals.split(","))}
+    if hometown:
+        params["player"]["hometown"] = hometown
+    if training:
+        params["player"]["training"] = training
     g = S.Game.new(_path(save), params)
     st = g.state
     click.echo(f"Created {_path(save)}: {len(st.people)} people, {len(st.projects)} projects, start {st.date}.")

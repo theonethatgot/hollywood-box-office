@@ -100,7 +100,10 @@ def test_stage_values_valid(cfg, params):
     assert all(p.stage in ok for p in st.projects.values())
     for p in st.projects.values():
         if p.stage in ("shooting", "post", "awaiting_release", "released"):
-            assert all(st.roles[r].cast_id for r in p.role_ids), p.id
+            principal = [st.roles[r] for r in p.role_ids if st.roles[r].importance != "featured"]
+            assert all(r.cast_id for r in principal), p.id
+            assert all(st.roles[r].cast_id or st.roles[r].status == "filled locally" or p.stage == "released"
+                       for r in p.role_ids if st.roles[r].importance == "featured"), p.id
 
 
 def test_hidden_fields_exist_but_are_dataclass_fields(cfg, params):

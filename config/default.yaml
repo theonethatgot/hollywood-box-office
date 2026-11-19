@@ -32,6 +32,19 @@ studios:                            # historical studios active in 1980 (names o
   - {id: st-nw,  name: New World Pictures, tier: mini, slate: 10, budget_median: 1.5, risk: 70}
   - {id: st-ind, name: Independent distributors, tier: mini, slate: 0, budget_median: 2.5, risk: 70}
 
+studio_genres:                      # each studio's slate identity (relative weights; others default 1.0)
+  st-par: {comedy: 1.6, action: 1.4, horror: 0.8, family: 0.6}
+  st-uni: {comedy: 1.5, thriller: 1.3, scifi: 1.3, action: 1.2}
+  st-wb:  {action: 1.5, drama: 1.3, comedy: 1.3, horror: 0.7}
+  st-col: {comedy: 1.5, drama: 1.4, romance: 1.2}
+  st-fox: {scifi: 1.6, action: 1.4, comedy: 1.2}
+  st-ua:  {drama: 1.5, action: 1.4, thriller: 1.2}
+  st-mgm: {drama: 1.3, comedy: 1.3, family: 1.2, romance: 1.2}
+  st-bv:  {family: 4.0, comedy: 1.4, horror: 0.05, thriller: 0.3, romance: 0.4}
+  st-ori: {drama: 1.7, thriller: 1.4, comedy: 1.2, family: 0.4}
+  st-avc: {horror: 2.0, thriller: 1.6, scifi: 1.2, family: 0.3}
+  st-nw:  {horror: 2.5, action: 1.8, scifi: 1.5, drama: 0.4, family: 0.3, romance: 0.4}
+
 agencies:
   - {id: ag-wma, name: William Morris Agency, tier: 1, hustle: 60, negotiation: 70, info: 70}
   - {id: ag-icm, name: International Creative Management, tier: 1, hustle: 65, negotiation: 70, info: 70}
@@ -65,14 +78,15 @@ casting:
   shortlist_size: 8
   audition_size: 10
   direct_offer_bankability: 55     # leads above this get direct offers
-  star_weight_by_role: {lead: 1.0, colead: 0.6, supporting: 0.15}
+  star_weight_by_role: {lead: 1.0, colead: 0.6, supporting: 0.15, featured: 0.03}
   budget_star_pivot_m: 6.0         # budgets ($M, 1980 dollars) above this want stars for leads
   talent_obs_noise: 10
   shortlist_noise: 14             # casting directors' differing tastes per role
   audition_day_sd: 8
   max_delays_before_relaxing: 2
   offer_response_days: 10
-  atl_role_share: {lead: 0.40, colead: 0.25, supporting: 0.08}   # share of ATL pool per role
+  atl_role_share: {lead: 0.40, colead: 0.25, supporting: 0.08, featured: 0.015}   # share of ATL pool per role
+  featured_roles: [6, 12]          # smaller speaking parts per film (real productions cast 15-30)
   accept_threshold: -0.35
   idle_weeks_desperation: 26
 
@@ -146,7 +160,7 @@ careers:
   bankability_lr: 0.35
   critical_lr: 0.30
   fame_decay_yearly: 0.10
-  memorability: {lead: 0.9, colead: 0.6, supporting: 0.25}
+  memorability: {lead: 0.9, colead: 0.6, supporting: 0.25, featured: 0.06}
   retire_idle_years: 4
   look_age_peak: {m: 34, f: 28}    # market bias curve (configurable, era-specific later)
   look_age_width: {m: 16, f: 12}
@@ -160,10 +174,30 @@ finance:
   day_job_idle_weeks: 12
 
 jobbing:                            # TV guest spots, commercials, bit parts, stage (hsim/systems/jobbing.py)
-  base_weekly: 0.14                # weekly chance of an offer for a typical represented working actor
+  base_weekly: 0.08                # weekly chance of a direct booking (commercial, bit part, TV movie, stage)
   no_agent_factor: 0.25
 
+people:                             # named professionals (hsim/world/people.py)
+  agents_per_agency_tier: {"1": 6, "2": 4, "3": 3}
+  casting_directors_major: 2
+  casting_directors_mini: 1
+  casting_directors_independent: 8
+
+tv:
+  shows: 48                        # fictional series on real networks (hsim/world/tv.py)
+  guest_parts_per_week: 3          # up to this many guest parts per show per week, in season (Jul-Mar)
+  cd_known_picks: 2
+  audition_size: 6
+  submit_base: 0.6
+
+social:
+  player_weekly: 0.22              # chance per week of an ordinary encounter with someone you know
+  premiere_invite_weekly: 0.06
+  npc_friend_weekly: 0.03
+
 agents:
+  cd_known_picks: 4                # actors a casting director brings in without submissions
+  submit_base: 0.9                 # agent submission propensity (scaled by hustle, fit, strategy)
   sign_newcomer_yearly: 0.30       # base chance an unrepresented actor gets signed each year
   open_call_slots: 2               # unrepresented/unknown actors seen per supporting-role audition
 

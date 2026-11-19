@@ -58,6 +58,19 @@ TITLE_WORDS = {
               ["Frontier", "Colony", "Signal", "Horizon", "Voyager", "Machine", "Orbit", "Station"]),
 }
 
+TITLE_NOUNS = ["Night", "Wolves", "Damned", "Deep", "Storm", "Lost", "Heart", "Dawn", "Gods", "Brave", "Fallen", "City"]
+PLACES = ["Midnight", "Dawn", "Sundown", "Crystal Lake", "Eagle Pass", "Gallows Hill", "Coney Island", "Big Sur"]
+SINGLE_TITLES = {
+    "drama": ["Homecoming", "Inheritance", "Testament", "Reckoning", "Tidewater", "Hometown", "Wildflower"],
+    "comedy": ["Hijinks", "Moonlighting", "Showoffs", "Bachelors", "Slapshot Sally", "Loose Change", "Jackpot"],
+    "action": ["Outlaw", "Firestorm", "Vendetta", "Hardcase", "Overdrive", "Payback", "Crossfire"],
+    "romance": ["Rendezvous", "Moonstruck Summer", "Serenade", "Sweethearts", "Daydream", "Paramour"],
+    "thriller": ["Blackout", "Surveillance", "Undertow", "Cold Trail", "Fever Pitch", "Static", "Witness Box"],
+    "horror": ["Nightcrawler", "Bloodline", "Hellbound", "The Hollow", "Scarecrow", "Eclipse", "The Pact"],
+    "family": ["Bandit", "Skyhook", "Pip and the Pirates", "The Wishing Well", "Buckaroo", "Moonbeam"],
+    "scifi": ["Starfall", "Outland Station", "Cryo", "Terminus", "Nova", "Exodus 9", "Zero Gravity"],
+}
+
 PREMISE = {
     "drama": (["a widowed steelworker", "an estranged daughter", "a small-town lawyer", "a fading jazz pianist",
                "two brothers", "a Vietnam veteran", "a single mother", "an ageing boxer"],
@@ -111,4 +124,5 @@ ROLE_DESC = {
     "lead": "the protagonist; carries the film",
     "colead": "the second lead; a major arc opposite the protagonist",
     "supporting": "a key supporting part",
+    "featured": "a smaller speaking part with a few scenes",
 }

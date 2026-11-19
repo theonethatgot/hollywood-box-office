@@ -37,6 +37,10 @@ def _cast_people(st, p):
 
 def _try_start(st, cfg, p) -> None:
     roles = [st.roles[r] for r in p.role_ids]
+    for r in roles:
+        if r.importance == "featured" and not r.cast_id:
+            r.status = "filled locally"          # small parts not cast by start are filled by local hires
+    roles = [r for r in roles if r.cast_id or r.importance != "featured"]
     if p.director_id and all(r.cast_id for r in roles):
         p.stage = "shooting"
         p.shoot_end = add_weeks(st.date, p.shoot_weeks)

@@ -174,6 +174,15 @@ BULK = {   # name: (subject variable, query template, chunk size)
   OPTIONAL {{ ?st pq:P585 ?date }} OPTIONAL {{ ?st pq:P1686 ?work }} }}""", 1000),
     "labels": ("x", """SELECT ?x ?label WHERE {{ VALUES ?x {{ {values} }}
   ?x rdfs:label ?label FILTER(LANG(?label) = "en") }}""", 1500),
+    "castroles": ("f", """SELECT ?f ?p ?charLabel ?charName WHERE {{ VALUES ?f {{ {values} }}
+  ?f p:P161 ?st. ?st ps:P161 ?p.
+  OPTIONAL {{ ?st pq:P453 ?char. ?char rdfs:label ?charLabel FILTER(LANG(?charLabel) = "en") }}
+  OPTIONAL {{ ?st pq:P4633 ?charName }}
+  FILTER(BOUND(?charLabel) || BOUND(?charName)) }}""", 300),
+    "names": ("x", """SELECT ?x ?en ?mul WHERE {{ VALUES ?x {{ {values} }}
+  OPTIONAL {{ ?x rdfs:label ?en FILTER(LANG(?en) = "en") }}
+  OPTIONAL {{ ?x rdfs:label ?mul FILTER(LANG(?mul) = "mul") }}
+  FILTER(BOUND(?en) || BOUND(?mul)) }}""", 1500),
     "imdbids": ("x", """SELECT ?x ?imdb WHERE {{ VALUES ?x {{ {values} }} ?x wdt:P345 ?imdb. }}""", 2000),
 }
 
@@ -274,7 +283,7 @@ def run(y0: int, y1: int, statement_order: bool, workers: int, min_interval: flo
     films = ing.film_list(y0, y1)
     ids = sorted(films)
     print(f"films {y0}-{y1}: {len(ids)}", flush=True)
-    for name in ("filmitems", "filmmeta", "filmdates"):
+    for name in ("filmitems", "filmmeta", "filmdates", "castroles"):
         ing.bulk(name, ids)
     people, refs = ing.people_of(ids)
     print(f"people: {len(people)}; referenced items: {len(refs)}", flush=True)
@@ -282,6 +291,8 @@ def run(y0: int, y1: int, statement_order: bool, workers: int, min_interval: flo
         ing.bulk(name, people)
     spouses = {q(r["sp"]) for r in store.rows("spouses")}
     ing.bulk("labels", set(refs) | spouses)
+    # Wikidata increasingly stores names only as language-neutral "mul" labels
+    ing.bulk("names", set(ids) | set(people) | set(refs) | spouses)
     if statement_order:
         ing.statement_order(ids, workers)
     summary = {"years": [y0, y1], "films": len(ids), "people": len(people), "seconds": round(time.time() - t0, 1),

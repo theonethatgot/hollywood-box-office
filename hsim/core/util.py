@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import datetime as dt
 import math
+from functools import lru_cache
 
 ISO = "%Y-%m-%d"
 
@@ -40,6 +41,7 @@ def week_of_year(s: str) -> int:
     return d(s).isocalendar()[1]
 
 
+@lru_cache(maxsize=300_000)
 def age_on(birth: str, on: str) -> int:
     b, o = d(birth), d(on)
     return o.year - b.year - ((o.month, o.day) < (b.month, b.day))

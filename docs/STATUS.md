@@ -27,6 +27,35 @@ covered by tests or the batch and validation reports, and usable from the CLI.
 | Narrator | Packets (canon, rulings, delegated, projects with premises, people cards with traits, motivation, real-person flag and shared history, industry chart and news, pending decisions, continuity with recent scenes and threads, era note, notes); reply parser; adjudication; idempotent, stale-safe submission |
 | Tools/tests | `tools/batch.py` (fictional or `--historical`), `tools/validate_snapshot.py` (anchor ranks); 22 tests |
 
+## Experience pass (v0.2): living professional ecosystem
+| Area | What works |
+|---|---|
+| Agents and casting directors | Named agents (per agency) and casting directors (per studio + independents) with personas. Agents **submit** clients for roles based on hustle, fit and a **strategy derived from the client's goals**; CDs bring in people they know, screen submissions and pass with reasons from the actual scoring; auditions leave lasting impressions on CDs and directors; monthly agent check-ins summarise real activity |
+| Episodic TV | 48 fictional series on real networks (format, premise, regulars, producer, episode directors); guest parts cast through the same submission/audition process in season; bookings carry show, character, episode, director and co-stars |
+| Featured parts | Every film has 6–12 smaller speaking parts open to submissions (historical films keep documented billing 5–8 as attachments) |
+| Jobbing | Commercials, bit parts in real productions in the pipeline, TV movies and stage productions of real plays, each with named colleagues |
+| Relationships | Co-workers, casting rooms, premieres and ordinary social encounters create and deepen contacts; access respects fame gaps; NPC friendships deepen by the same rule |
+| Feedback | Audition feedback derived from the biggest real gap to the chosen actor (presence, craft, type, name), so players can respond without seeing numbers |
+| Characters | Fictional people have persistent personas (background, home town, signature habit, style); real people get reputation and goals inferred from their documented careers and honours (personality remains a marked prior) |
+| Projects | Studio genre identities (Disney family, New World exploitation, Orion adult drama...), tone and selling point per project; richer titles; grammatical premises; directors accept or decline by genre fit, budget versus standing and recent activity, and studios weigh affordability |
+| Narrator packets | New sections: `period_summary` (with explicit quiet periods), `career_activity`, `your_work` (films + jobs), `network`, `open_threads` (including goal versus reality); people cards with profession, reputation, persona, ambition and shared history; real films carry a `historical_record` (documented vs simulated) |
+| Protagonist | `--goals`, `--hometown`, `--training`; new `notable` background |
+| Historical data | Documented character names (Wikidata P453/P4633, ~7% of roles; the rest are generated and flagged); multilingual (`mul`) names recovered 194 films and 380 people (e.g. *The Empire Strikes Back*, Meryl Streep); original release year preferred over later foreign releases; later rights-holders, TV networks, adult films and cast-less real films excluded; real independent distributors become studios; `tools/validate_history.py` reports documented vs simulated |
+
+Example packets: `docs/examples/`.
+
+### Measured after the pass
+- Working actor: ~100–150 agent submissions a year, a handful of call-ins, several bookings, film roles rare.
+- Established actor: 50+ auditions a year, mostly episodic TV; a film co-lead after ~13 months in the example career.
+- Snapshot validation: 7 of 10 anchor stars in the top 50 by bankability (median rank 19, was 49).
+- 1980 calibration (4 worlds, 1 year): admissions 0.91–0.98 billion (reference ~1.02); about 238 releases; tracking bias +1%; 44% profitable. A full recalibration pass is due after this many structural changes.
+- Performance: ~40 seconds per simulated year (was ~5), because every submission, audition, job and encounter is now simulated industry-wide. Fine for play (a few seconds per month); a target for the next optimisation pass.
+
+### Known gaps after the pass
+- Some real-director pairings on fictional projects are still unusual (e.g. a prestige drama director on a horror film), though rarer.
+- Packets run ~5–8k tokens; compaction controls are planned.
+- Wikidata documents character names for only ~7% of roles.
+
 ## Calibration (4 historical worlds × 2 years, 1980–81, 1980 dollars)
 | Metric | Simulated | Reference / note |
 |---|---|---|

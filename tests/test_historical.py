@@ -48,8 +48,9 @@ def test_real_people_and_films_loaded():
     assert {"wd:QA", "wd:QB", "wd:QC", "wd:QD"} <= set(st.people)
     fut = [p for p in st.projects.values() if p.historical_ref == "wd:QF3"]
     assert len(fut) == 1 and fut[0].director_id == "wd:QD"
-    intended = [st.roles[r].intended for r in fut[0].role_ids]
+    intended = [st.roles[r].intended for r in fut[0].role_ids if st.roles[r].intended]
     assert intended == ["wd:QB", "wd:QA"]
+    assert any(st.roles[r].importance == "featured" and not st.roles[r].intended for r in fut[0].role_ids)
     assert st.people["wd:QA"].provenance["personality"].startswith("prior")
 
 

@@ -55,33 +55,29 @@ def _iso(t: str, prec: int = 11) -> str | None:
         return None
 
 
-def _first_time(ent, prop):
-    """Most precise date first, then earliest (a festival date beats a bare year)."""
+def _best_claim(ent, prop):
+    """The original release: the earliest YEAR, and within that year the most precise
+    date (so a later foreign release never replaces the original year)."""
     vals = []
     for c in ent.get("claims", {}).get(prop, []):
         v = _val(c)
         t = _wb_time(v)
         if t:
-            vals.append((-v.get("precision", 11), t))
-    return sorted(vals)[0][1] if vals else None
+            vals.append((t[:4], -v.get("precision", 11), t, v))
+    return sorted(vals, key=lambda x: (x[0], x[1], x[2]))[0] if vals else None
+
+
+def _first_time(ent, prop):
+    best = _best_claim(ent, prop)
+    return best[2] if best else None
 
 
 def _precision(ent, prop) -> str:
-    """'day' | 'month' | 'year' for the earliest date of a property."""
-    best = None
-    for c in ent.get("claims", {}).get(prop, []):
-        v = _val(c)
-        if isinstance(v, dict) and "time" in v:
-            t = _wb_time(v)
-            if t and (best is None or t < best[0]):
-                best = (t, v.get("precision", 11), v["time"])
-    for c in ent.get("claims", {}).get(prop, []):
-        v = _val(c)
-        if isinstance(v, dict) and "time" in v and v.get("precision", 11) > (best[1] if best else -1):
-            best = (_wb_time(v), v.get("precision", 11), v["time"])
+    """'day' | 'month' | 'year' for the chosen release date."""
+    best = _best_claim(ent, prop)
     if not best:
         return "year"
-    t, prec, raw = best
+    prec = -best[1]
     return "day" if prec >= 11 else "month" if prec == 10 else "year"
 
 
@@ -141,19 +137,28 @@ def build(y0: int, y1: int) -> dict:
     def rows(name):
         return store.rows(name)
 
+    names = {qid(r["x"]): r.get("en") or r.get("mul") for r in rows("names")}
     labels = {qid(r["x"]): r["label"] for r in rows("labels")}
+    for k, v in names.items():
+        labels.setdefault(k, v)
     excluded = {qid(r["f"]) for r in rows("exclude")}
+    chars = {}
+    for r in rows("castroles"):
+        name = r.get("charName") or r.get("charLabel")
+        if name and not name.startswith("Q"):
+            chars.setdefault(qid(r["f"]), {})[qid(r["p"])] = name
     films = {}
     unordered = set()
     for ent in _film_entities(store, y0, y1, rows):
         if ent.get("cast_order") == "unordered":
             unordered.add(ent["id"])
-        title = ent.get("labels", {}).get("en", {}).get("value")
+        title = ent.get("labels", {}).get("en", {}).get("value") or names.get(ent["id"])
         date = _first_time(ent, "P577")
         if not (title and date) or not (y0 <= int(date[:4]) <= y1) or ent["id"] in excluded:
             continue
         films[ent["id"]] = {
             "title": title, "date": date, "date_precision": _precision(ent, "P577"),
+            "characters": chars.get(ent["id"], {}),
             "genres": [labels.get(g, g) for g in _ids(ent, "P136")][:5],
             "cast": _ids(ent, "P161")[:40 if ent["id"] in unordered else 12], "directors": _ids(ent, "P57")[:3],
             "distributors": [labels.get(x, x) for x in _ids(ent, "P750")][:3],
@@ -176,7 +181,8 @@ def build(y0: int, y1: int) -> dict:
     people = {}
     for r in rows("people"):
         pid = qid(r["p"])
-        if pid not in needed or "label" not in r:
+        r["label"] = r.get("label") or names.get(pid)
+        if pid not in needed or not r["label"]:
             continue
         birth = _iso(r["birth"])
         if not birth:

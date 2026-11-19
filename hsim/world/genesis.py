@@ -173,20 +173,79 @@ def make_director(state: WorldState, cfg: dict, key: str, start: str) -> M.Perso
 
 
 # ---------------------------------------------------------------- projects ---
+TONES = {
+    "drama": ["intimate", "sweeping", "gritty, New York-set", "bittersweet", "issue-driven"],
+    "comedy": ["broad", "screwball", "satirical", "raunchy", "warm-hearted"],
+    "action": ["gritty", "glossy", "B-movie", "revenge-driven", "buddy-picture"],
+    "romance": ["glossy", "bittersweet", "old-fashioned", "steamy", "wistful"],
+    "thriller": ["paranoid", "slow-burn", "Hitchcockian", "pulpy", "conspiracy-minded"],
+    "horror": ["slasher", "atmospheric", "gory", "supernatural", "drive-in"],
+    "family": ["wholesome", "adventurous", "whimsical", "sentimental", "slapstick"],
+    "scifi": ["space-opera", "cerebral", "effects-driven", "dystopian", "pulpy"],
+}
+
+
+def _identity(g, genre: str, budget_real: float, studio) -> tuple:
+    tone = _pick(g, TONES[genre])
+    if budget_real >= 14:
+        pitch = "a big-budget event picture the studio is building its year around"
+    elif budget_real >= 8:
+        pitch = "a mid-budget studio picture looking for a marketable lead"
+    elif budget_real >= 3:
+        pitch = "a modestly budgeted picture that needs to find its audience"
+    else:
+        pitch = ("a low-budget exploitation picture aimed at drive-ins and late shows" if studio.tier == "mini"
+                 else "a low-budget picture made on a tight schedule")
+    return tone, pitch
+
+
 def _title(g, genre: str, used: set) -> str:
     w1, w2 = N.TITLE_WORDS[genre]
     for _ in range(30):
-        t = f"{w1[int(g.integers(len(w1)))]} {w2[int(g.integers(len(w2)))]}"
-        if g.random() < 0.15:
-            t = f"The {t}"
+        a, b = w1[int(g.integers(len(w1)))], w2[int(g.integers(len(w2)))]
+        u = g.random()
+        if u < 0.45:
+            t = f"{a} {b}"
+        elif u < 0.60:
+            t = f"The {a} {b}"
+        elif u < 0.72:
+            t = f"{_pick(g, N.LAST)}'s {b}"
+        elif u < 0.84:
+            t = f"{b} of the {_pick(g, N.TITLE_NOUNS)}"
+        elif u < 0.94:
+            t = _pick(g, N.SINGLE_TITLES[genre])
+        else:
+            t = f"{a} {b} at {_pick(g, N.PLACES)}"
         if t not in used:
             return t
     return f"{t} {int(g.integers(2, 9))}"
 
 
+def _agree(subject: str, verb_phrase: str) -> str:
+    """Make the first verb agree with the subject (templates mix singular and plural subjects)."""
+    plural = subject.split()[0].lower() in ("two", "three", "four", "five", "six")
+    first, _, rest = verb_phrase.partition(" ")
+    if first.endswith("ly") and rest:                 # adverb first: agree the verb after it
+        return f"{first} {_agree(subject, rest)}"
+    if first in ("must", "can", "will"):
+        return verb_phrase
+    singular_form = first.endswith("s") and first not in ("is",)
+    if plural and (singular_form or first in ("is", "has")):
+        first = {"is": "are", "has": "have"}.get(first) or (
+            first[:-3] + "y" if first.endswith("ies") else
+            first[:-2] if first.endswith(("ches", "shes", "sses", "xes", "zes")) else first[:-1])
+    elif not plural and not singular_form and first not in ("is", "has"):
+        first = {"are": "is", "have": "has"}.get(first) or (
+            first[:-1] + "ies" if first.endswith("y") and first[-2] not in "aeiou" else
+            first + "es" if first.endswith(("ch", "sh", "ss", "x", "z")) else first + "s")
+    return f"{first} {rest}".strip()
+
+
 def _premise(g, genre: str) -> str:
     who, what, how = N.PREMISE[genre]
-    return f"{who[int(g.integers(len(who)))].capitalize()} {what[int(g.integers(len(what)))]} {how[int(g.integers(len(how)))]}."
+    subject = who[int(g.integers(len(who)))]
+    verb = _agree(subject, what[int(g.integers(len(what)))])
+    return f"{subject[0].upper() + subject[1:]} {verb} {how[int(g.integers(len(how)))]}."
 
 
 def make_project(state: WorldState, cfg: dict, studio: M.Studio, key: str, created: str) -> M.Project:
@@ -222,6 +281,7 @@ def make_project(state: WorldState, cfg: dict, studio: M.Studio, key: str, creat
         post_weeks=int(g.integers(*dev["post_weeks"])) + (8 if genre == "scifi" else 0),
         location=["Los Angeles", "New York", "Toronto", "Vancouver", "Texas", "London", "Mexico", "Chicago"][int(g.integers(8))],
     )
+    p.tone, p.logline_extra = _identity(g, genre, budget_real, studio)
     _make_roles(state, cfg, p, g)
     state.projects[pid] = p
     return p
@@ -238,11 +298,15 @@ def _make_roles(state, cfg, p: M.Project, g):
         specs.append(("colead", cg, int(clamp(center + g.normal(-3, 7), 18, 70))))
     for _ in range(int(g.integers(1, 4))):
         specs.append(("supporting", "m" if g.random() < 0.6 else "f", int(g.integers(20, 70))))
-    shares = {"lead": 0.45, "colead": 0.28, "supporting": 0.09}
+    lo, hi = cfg["casting"]["featured_roles"]
+    for _ in range(int(g.integers(lo, hi + 1))):
+        specs.append(("featured", "m" if g.random() < 0.55 else "f", int(g.integers(18, 70))))
+    shares = {"lead": 0.45, "colead": 0.28, "supporting": 0.09, "featured": 0.03}
     for i, (imp, gen, c) in enumerate(specs):
         rid = state.new_id("rol")
         reg = p.genre if imp != "supporting" or g.random() < 0.6 else M.REGISTERS[int(g.integers(len(M.REGISTERS)))]
-        role = M.Role(id=rid, project_id=p.id, name=_role_name(g, gen), importance=imp, gender=gen,
+        from .people import character_name
+        role = M.Role(id=rid, project_id=p.id, name=character_name(g, gen), importance=imp, gender=gen,
                       age_min=max(16, c - 7), age_max=c + 7, register=reg, screen_share=shares[imp],
                       description=N.ROLE_DESC[imp])
         state.roles[rid] = role
@@ -285,7 +349,8 @@ def new_world(cfg: dict, seed: int, start: str, data_pack: dict | None = None) -
             slate_per_year=s["slate"], budget_median=s["budget_median"], risk_appetite=s["risk"],
             marketing_eff=float(np.clip(g.normal(1.0, 0.1), 0.7, 1.3)),
             exec_taste=float(clamp(g.normal(50, 15))), historical=True,
-            genre_weights={x: float(np.clip(g.normal(1.0, 0.3), 0.3, 2.0)) for x in M.GENRES},
+            genre_weights={x: float(np.clip(g.normal(1.0, 0.15), 0.6, 1.4)) * cfg.get("studio_genres", {}).get(s["id"], {}).get(x, 1.0)
+                           for x in M.GENRES},
             provenance={"source": "config", "note": "real studio name; attributes are model estimates"})
     for a in cfg["agencies"]:
         st.agencies[a["id"]] = M.Agency(id=a["id"], name=a["name"], tier=a["tier"], hustle=a["hustle"],
@@ -304,6 +369,14 @@ def new_world(cfg: dict, seed: int, start: str, data_pack: dict | None = None) -
         from ..io.datapack import load_pack_into
         load_pack_into(st, cfg, data_pack)
     assign_agents(st, cfg)
+    from . import people as PEOPLE
+    from . import tv as TV
+    PEOPLE.make_agents(st, cfg)
+    PEOPLE.make_casting_directors(st, cfg)
+    for pid, person in sorted(st.people.items()):
+        if not person.persona:
+            PEOPLE.give_persona(st, person, pid)
+    TV.make_shows(st, cfg)
 
     # --- seed production pipeline, stages inferred from release dates ---
     horizon = cfg["world"]["pipeline_months"]
@@ -383,7 +456,7 @@ def assign_agents(st: WorldState, cfg: dict | None = None, yearly: bool = False)
 
 def default_orders() -> dict:
     return {
-        "auto_accept_auditions": ["supporting", "colead", "lead"],
+        "auto_accept_auditions": ["featured", "supporting", "colead", "lead"],
         "auto_decline_offers_below_quote_pct": 0,
         "auto_accept_jobs": True,
         "let_agent_negotiate": [],
@@ -395,7 +468,7 @@ def create_player(st: WorldState, cfg: dict, spec: dict) -> M.Person:
     """Create the protagonist. Background sets career position; hidden talent is
     drawn from the same distribution as any NPC with that background."""
     bg = spec.get("background", "unknown")
-    archetype = {"unknown": "newcomer", "working": "working", "star": "star"}[bg]
+    archetype = {"unknown": "newcomer", "working": "working", "notable": "notable", "star": "star"}[bg]
     p = make_actor(st, cfg, "player", st.date, archetype=archetype, gender=spec.get("gender"),
                    birth=spec.get("birth"), name=spec.get("name"), tier="P")
     p.id = "player"
@@ -421,6 +494,13 @@ def create_player(st: WorldState, cfg: dict, spec: dict) -> M.Person:
         p.controller = "npc"          # established backgrounds come with representation, by the NPC rule
         assign_agents(st, cfg)
         p.controller = "player"
+    from . import people as PEOPLE
+    PEOPLE.give_persona(st, p, "player")
+    if spec.get("hometown"):
+        p.persona["hometown"] = spec["hometown"]
+    if spec.get("training"):
+        p.persona["background"] = spec["training"]
+    PEOPLE.assign_agent_people(st)
     st.log("player_created", f"{p.name} begins their story in Hollywood.", actors=[p.id], salience=3,
            data={"background": bg})
     return p

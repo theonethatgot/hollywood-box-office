@@ -64,6 +64,25 @@ class Person:
     awards: list = field(default_factory=list)       # [{year, award, category, result, project_id}]
     last_work: str | None = None
     provenance: dict = field(default_factory=dict)   # {source, ids, confidence}
+    persona: dict = field(default_factory=dict)      # background, hometown, signature, style
+    employer: str | None = None                      # agency / studio id for agents, casting directors
+    agent_person_id: str | None = None               # the named agent who represents this actor
+
+
+@dataclass
+class Show:
+    """A (fictional) television series: a workplace with recurring people."""
+    id: str
+    title: str
+    network: str
+    genre: str
+    format: str
+    premise: str
+    regulars: list = field(default_factory=list)
+    producer_id: str | None = None
+    director_ids: list = field(default_factory=list)
+    started: int = 1979
+    active: bool = True
 
 
 @dataclass
@@ -115,6 +134,7 @@ class Role:
     auditioners: list = field(default_factory=list)
     performance: float | None = None  # HIDDEN until reviews
     intended: str | None = None       # historical attachment (a prior, not a guarantee)
+    name_documented: bool = False     # character name from records (else generated)
 
 
 @dataclass
@@ -157,6 +177,11 @@ class Project:
     location: str = "Los Angeles"
     historical_ref: str | None = None
     delays: int = 0
+    distributor_note: str | None = None   # documented distributor label (historical films)
+    date_approx: bool = False             # release date known only to month/year
+    tone: str = ""                        # creative identity (e.g. "gritty", "glossy")
+    logline_extra: str = ""               # selling point / context for the narrator
+    casting_director_id: str | None = None
 
 
 @dataclass

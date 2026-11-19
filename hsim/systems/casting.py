@@ -88,9 +88,10 @@ def casting_utility(st: WorldState, cfg, proj: M.Project, role: M.Role, p: M.Per
     talent = perceived_talent(st, cfg, proj, p)
     cost_ratio = ask_fee(st, cfg, p, proj) / max(1.0, rb)
     rel = 0.0
-    if proj.director_id:
-        r = st.rel(proj.director_id, p.id, create=False)
-        rel = r.affinity / 10 if r else 0.0
+    for who in (proj.director_id, proj.casting_director_id):
+        if who:
+            r = st.rel(who, p.id, create=False)
+            rel += r.affinity / 3 if r else 0.0         # directors and CDs remember people
     taste = cfg["casting"]["shortlist_noise"] * R.gauss(st.seed, "casting-taste", role.id, p.id)
     return (sw * p.bankability * 0.6 + 0.5 * talent + 45 * f + rel + agency_visibility(st, p)
             - 25 * max(0.0, cost_ratio - 1.2) + taste)
@@ -129,29 +130,64 @@ def candidate_pool(st: WorldState, cfg, proj: M.Project, role: M.Role) -> list:
 
 # -------------------------------------------------------------- directors ---
 def attach_director(st: WorldState, cfg, proj: M.Project, quick: bool = False) -> bool:
+    """Studio ranks available directors; each director decides whether the project
+    suits them (genre, budget level vs their standing, how active they are)."""
     if proj.director_id:
         return True
     start, end = proj.prepro_start or st.date, add_weeks(proj.shoot_end or st.date, 1)
     g = R.stream(st.seed, "director-pick", proj.id, st.date)
     real_m = proj.budget / 1e6 / market.infl(cfg, year(st.date))
-    best, best_u = None, -1e9
+    ranked = []
     for p in st.directors():
         if not available(p, start, end):
             continue
+        standing = 0.6 * p.prestige + 0.4 * p.bankability
+        affordability = max(0.0, standing - (30 + 2.5 * real_m)) * 0.9   # big names cost more than small films pay
         u = (p.direction.get("commercial", 50) * (0.3 + 0.05 * real_m) + p.bankability * 0.3
-             + p.prestige * 0.2 + p.direction.get("vision", 50) * 0.2 + g.normal(0, 12))
-        if u > best_u:
-            best, best_u = p, u
-    if best is None:
-        return False
-    proj.director_id = best.id
-    best.calendar.append({"project_id": proj.id, "start": start, "end": end, "kind": "direct"})
-    best.credits.append({"project_id": proj.id, "title": proj.title, "role": "director",
-                         "year": year(proj.release_date or proj.shoot_end or st.date), "genre": proj.genre, "kind": "film"})
-    if not quick:
-        st.log("director_attached", f"{best.name} will direct '{proj.title}' for {st.studios[proj.studio_id].name}.",
-               actors=[best.id], refs={"project": proj.id}, salience=1)
-    return True
+             + p.prestige * 0.2 + p.direction.get("vision", 50) * 0.2 + 25 * director_genre_fit(p, proj.genre)
+             - affordability + g.normal(0, 12))
+        ranked.append((u, p.id, p))
+    ranked.sort(key=lambda x: (-x[0], x[1]))
+    for u, _, p in ranked[:25]:
+        if director_accepts(st, cfg, p, proj, real_m):
+            proj.director_id = p.id
+            p.calendar.append({"project_id": proj.id, "start": start, "end": end, "kind": "direct"})
+            p.credits.append({"project_id": proj.id, "title": proj.title, "role": "director",
+                              "year": year(proj.release_date or proj.shoot_end or st.date), "genre": proj.genre,
+                              "kind": "film"})
+            if not quick:
+                st.log("director_attached", f"{p.name} will direct '{proj.title}' for {st.studios[proj.studio_id].name}.",
+                       actors=[p.id], refs={"project": proj.id}, salience=1)
+            return True
+    return False
+
+
+def director_genre_fit(p: M.Person, genre: str) -> float:
+    films = [c for c in p.credits if c.get("role") == "director" and c.get("genre")]
+    if not films:
+        return 0.5
+    return sum(1 for c in films if c["genre"] == genre) / len(films)
+
+
+def director_accepts(st, cfg, p: M.Person, proj: M.Project, real_m: float) -> bool:
+    """Would this director take this job? Established names turn down small generic work;
+    long-idle older directors are less likely to come back for it."""
+    from ..core.util import age_on
+    standing = 0.6 * p.prestige + 0.4 * p.bankability
+    script_read = proj.script_quality + 10 * R.gauss(st.seed, "dir-read", proj.id, p.id)
+    budget_level = clamp(50 + 15 * math.log(max(real_m, 0.2) / 8))
+    fit_g = director_genre_fit(p, proj.genre)
+    appeal = (0.55 * script_read + 0.3 * budget_level) * (0.6 + 0.8 * fit_g)
+    age = age_on(p.birth, st.date)
+    idle = 1.0
+    if p.historical:
+        recent = [c for c in p.credits if c.get("role") == "director" and c.get("year", 0) >= year(st.date) - 6]
+        if not recent:
+            idle *= 0.3                    # no recent documented US directing work
+        if age > 65:
+            idle *= 0.35
+    prob = idle / (1 + math.exp(-(appeal - standing) / 5))
+    return R.unit(st.seed, "dir-accept", proj.id, p.id) < prob
 
 
 # ------------------------------------------------------------- quick cast ---
@@ -174,7 +210,7 @@ def _cast(st: WorldState, cfg, proj: M.Project, role: M.Role, p: M.Person, fee: 
     role.cast_id, role.status, role.fee = p.id, "cast", round(fee, 0)
     role.points, role.points_type = points, points_type
     commit(p, proj)
-    p.quote = max(p.quote, role.fee) if role.importance != "supporting" else max(p.quote * 0.9, role.fee)
+    p.quote = max(p.quote, role.fee) if role.importance in ("lead", "colead") else max(p.quote * 0.95, role.fee) if role.importance == "supporting" else p.quote
     p.credits.append({"project_id": proj.id, "title": proj.title, "role": role.importance,
                       "character": role.name, "year": year(proj.release_date or proj.shoot_end or st.date),
                       "genre": proj.genre, "kind": "film"})
@@ -218,14 +254,19 @@ def _start_casting(st: WorldState, cfg, proj: M.Project, role: M.Role) -> None:
     if not pool:
         return
     sw, rb = star_weight(cfg, proj, role, st.date), role_budget(cfg, proj, role)
-    ranked = sorted(pool, key=lambda p: (-casting_utility(st, cfg, proj, role, p, sw, rb), p.id))
+    pool = [p for p in pool if fit(p, role, st.date) > 0.3]          # nobody considers a clear mismatch
+    if not pool:
+        return
+    utilities = {p.id: casting_utility(st, cfg, proj, role, p, sw, rb) for p in pool}
+    ranked = sorted(pool, key=lambda p: (-utilities[p.id], p.id))
     top = ranked[0]
     if role.importance == "lead" and top.bankability >= cfg["casting"]["direct_offer_bankability"]:
         role.shortlist = [p.id for p in ranked[1:cfg["casting"]["shortlist_size"]]]
         make_offer(st, cfg, proj, role, top, path="direct offer")
         return
-    invite = ranked[:cfg["casting"]["audition_size"]]
-    if role.importance == "supporting" or proj.budget < 3e6 * market.infl(cfg, year(st.date)):
+    from . import agents
+    invite = agents.build_audition_list(st, cfg, proj, role, pool, ranked, utilities)
+    if role.importance in ("supporting", "featured") or proj.budget < 3e6 * market.infl(cfg, year(st.date)):
         # open call: casting directors also see a few unknown / unrepresented actors
         chosen = {p.id for p in invite}
         unknowns = [p for p in pool if p.id not in chosen and (p.agent_id is None or p.fame < 0.01)]
@@ -250,8 +291,10 @@ def _npc_wants_audition(st, cfg, proj, role, p) -> bool:
 def _invite_player(st, cfg, proj, role, p) -> None:
     studio = st.studios[proj.studio_id].name
     director = st.people[proj.director_id].name if proj.director_id else "TBD"
-    summary = (f"Audition invitation: {role.name}, the {role.importance} role in '{proj.title}' "
-               f"({proj.genre}, {studio}; director {director}) on {role.audition_date}. Premise: {proj.premise}")
+    cd = st.people.get(proj.casting_director_id) if proj.casting_director_id else None
+    summary = (f"Audition: {role.name}, the {role.importance} role in '{proj.title}' "
+               f"({proj.genre}, {studio}; director {director}; casting {cd.name if cd else 'in-house'}) on "
+               f"{role.audition_date}. Premise: {proj.premise}")
     o = st.orders
     lead_interrupt = role.importance == "lead" and "auditions_lead" in o.get("interrupt_on", [])
     if role.importance in o.get("auto_accept_auditions", []) and not lead_interrupt:
@@ -289,6 +332,32 @@ def audition_score(st, cfg, proj, role, p: M.Person, prep: float) -> float:
             + 12 * (fit(p, role, st.date) - 0.6) + prep + (p.energy - 70) / 10 + form)
 
 
+def _tv_feedback(p: M.Person, winner: M.Person) -> str:
+    gaps = {"presence": (winner.presence - p.presence) * 0.10, "craft": (winner.craft - p.craft) * 0.25}
+    key = max(gaps, key=gaps.get)
+    if gaps[key] <= 0.5:
+        return "it was close; they went another way"
+    return ("they liked the read but wanted someone with more screen presence" if key == "presence"
+            else "they wanted a more polished read")
+
+
+def audition_feedback(st, cfg, proj, role, p: M.Person, winner: M.Person) -> str:
+    """What casting people actually tell agents: the biggest gap to the actor they chose."""
+    gaps = {
+        "presence": (winner.presence - p.presence) * 0.10,
+        "craft": (winner.craft - p.craft) * 0.25,
+        "type": (fit(winner, role, st.date) - fit(p, role, st.date)) * 12,
+        "name": (winner.bankability - p.bankability) * 0.25 * star_weight(cfg, proj, role, st.date),
+    }
+    key = max(gaps, key=gaps.get)
+    if gaps[key] <= 0.5:
+        return "it was close; they simply preferred another read"
+    return {"presence": "your read was solid, but they felt the actor they chose commanded the room more",
+            "craft": "they wanted a more polished, technically confident read",
+            "type": "they went with someone closer to how they saw the character",
+            "name": "they went with a more established name"}[key]
+
+
 def _hold_auditions(st, cfg, proj, role) -> None:
     present = [a for a in role.auditioners if a["id"] in st.people]
     if not present:
@@ -306,6 +375,10 @@ def _hold_auditions(st, cfg, proj, role) -> None:
     for rank, (_, sc, p) in enumerate(scored):
         if p.controller == "player":
             verdict = "won the part" if rank == 0 else ("made the final two" if rank == 1 else "did not get a callback")
+            if rank > 0:
+                fb = audition_feedback(st, cfg, proj, role, p, scored[0][2])
+                st.log("audition_feedback", f"Feedback from the room on '{proj.title}' (via your agent): {fb}.",
+                       actors=[p.id], refs={"project": proj.id}, salience=2, public=False)
             st.log("audition_result", f"You auditioned for {role.name} in '{proj.title}' and {verdict}.",
                    actors=[p.id], refs={"project": proj.id, "role": role.id}, salience=3, public=False,
                    data={"score": round(sc, 1), "rank": rank + 1, "of": len(scored)})
@@ -313,6 +386,8 @@ def _hold_auditions(st, cfg, proj, role) -> None:
             if rivals:
                 st.log("audition_rivals", f"Others seen for {role.name}: {', '.join(r.name for r in rivals)}.",
                        actors=[p.id] + [r.id for r in rivals], refs={"project": proj.id}, salience=1, public=False)
+    from . import agents
+    agents.audition_impressions(st, cfg, proj, role, scored)
     role.shortlist = [x[2].id for x in scored[1:]]
     make_offer(st, cfg, proj, role, scored[0][2], path="after auditions")
 
@@ -462,7 +537,7 @@ def accept_utility(st: WorldState, cfg, proj: M.Project, role: M.Role, p: M.Pers
     script_obs = proj.script_quality + g.normal(0, noise_sd)
     ref = max(p.quote, scale_total(cfg, proj, st.date))
     money_term = math.log(max(fee, 1) / ref)
-    size = {"lead": 1.0, "colead": 0.6, "supporting": 0.25}[role.importance]
+    size = {"lead": 1.0, "colead": 0.6, "supporting": 0.25, "featured": 0.1}[role.importance]
     director = st.people.get(proj.director_id) if proj.director_id else None
     dir_pres = director.prestige if director else 30
     rel = 0.0
@@ -476,7 +551,7 @@ def accept_utility(st: WorldState, cfg, proj: M.Project, role: M.Role, p: M.Pers
     else:
         idle = 1.0
     gl = p.goals or {"money": 0.3, "fame": 0.2, "prestige": 0.2, "art": 0.2, "stability": 0.1}
-    star_drop = -0.6 if (p.bankability > 60 and role.importance == "supporting") else 0.0
+    star_drop = -0.6 if (p.bankability > 60 and role.importance in ("supporting", "featured")) else 0.0
     if role.intended == p.id:
         star_drop += cfg["history"]["intended_role_bonus"]
     return (gl.get("money", 0.2) * 2.0 * money_term + gl.get("fame", 0.2) * 1.2 * size

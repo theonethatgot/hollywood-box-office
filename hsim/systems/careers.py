@@ -11,7 +11,7 @@ from ..core.util import age_on, clamp, days_between, year
 from . import decisions as D
 from . import market
 
-IMP_W = {"lead": 1.0, "colead": 0.55, "supporting": 0.15}
+IMP_W = {"lead": 1.0, "colead": 0.55, "supporting": 0.15, "featured": 0.04}
 
 
 def _cast(st, p):
@@ -116,7 +116,12 @@ def _yearly(st: WorldState, cfg: dict) -> None:
         a = make_actor(st, cfg, f"y{yr}-{i:04d}", st.date, archetype="newcomer")
         st.people[a.id] = a
     from ..world.genesis import assign_agents
+    from ..world import people as PEOPLE
     assign_agents(st, cfg, yearly=True)
+    for pid, person in sorted(st.people.items()):
+        if not person.persona:
+            PEOPLE.give_persona(st, person, pid)
+    PEOPLE.assign_agent_people(st)
 
 
 @D.handler("agency_offer")
@@ -124,6 +129,10 @@ def _agency_offer(st, cfg, dec, choice, params) -> str:
     ag = st.agencies[dec.refs["agency"]]
     if choice == "accept":
         st.player.agent_id = ag.id
-        st.log("new_agent", f"You signed with {ag.name}.", actors=[st.player_id], salience=3, public=False)
+        from ..world import people as PEOPLE
+        PEOPLE.assign_agent_people(st)
+        agent = st.people.get(st.player.agent_person_id)
+        st.log("new_agent", f"You signed with {ag.name}" + (f"; your agent is {agent.name}." if agent else "."),
+               actors=[st.player_id] + ([agent.id] if agent else []), salience=3, public=False)
         return f"You signed with {ag.name}."
     return f"You declined representation from {ag.name}."

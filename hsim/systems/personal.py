@@ -85,9 +85,11 @@ def _sparks(st, cfg) -> None:
             signal_p = pc["spark_base"] * (0.4 + 2.0 * att + 0.5 * npc.personality.get("openness", 50) / 100)
             if g.random() < signal_p and not any(d.kind == "romance" and d.status == "pending" and d.refs.get("person") == npc.id
                                                  for d in st.decisions.values()) and r.status != "ex":
-                st.log("chemistry", f"There is an unmistakable spark between you and {npc.name} on the set of "
-                                    f"'{st.projects[proj_id].title}'.", actors=[a.id, b.id], refs={"project": proj_id},
-                       salience=3, public=False)
+                where = (f"on the set of '{st.projects[proj_id].title}'" if proj_id in st.projects else
+                         "while you were spending time together" if proj_id == "social" else
+                         "on the job you're working together")
+                st.log("chemistry", f"There is an unmistakable spark between you and {npc.name} {where}.",
+                       actors=[a.id, b.id], salience=3, public=False)
                 D.create(st, cfg, "romance", f"Chemistry with {npc.name}: pursue something, or keep it professional?",
                          ["pursue", "keep_professional"], deadline_days=21, default="keep_professional",
                          refs={"person": npc.id}, interrupt="romance" in st.orders.get("interrupt_on", []),

@@ -31,6 +31,7 @@ from ..core.state import WorldState
 from ..core.util import add_days, add_weeks, age_on, clamp, d, days_between, year
 from ..systems import market
 from . import genesis as G
+from . import people as P
 
 ND = NormalDist()
 NATURAL = {"Q3739104"}
@@ -53,7 +54,8 @@ STUDIO_KEYS = [
     ("st-bv", ("disney", "buena vista", "touchstone")), ("st-ori", ("orion",)),
     ("st-avc", ("avco", "embassy")), ("st-nw", ("new world",)),
 ]
-NON_FEATURE = ("documentary", "concert film", "short film", "television film", "anthology")
+NON_FEATURE = ("documentary", "concert film", "short film", "television film", "anthology", "pornographic",
+               "adult film", "hardcore")
 BILLING_W = [1.0, 0.6, 0.35, 0.22, 0.15, 0.10]
 FAME_QUANTILES = [(0.0, 0.0005), (0.5, 0.004), (0.75, 0.015), (0.9, 0.05), (0.95, 0.10),
                   (0.98, 0.22), (0.995, 0.45), (1.0, 0.80)]
@@ -69,12 +71,34 @@ def genre_of(labels: list) -> str:
     return "drama"
 
 
+# Rights-holders that appear in Wikidata but were not 1980s theatrical distributors
+LATER_RIGHTS = ("netflix", "kaspien", "amazon", "hulu", "shout! factory", "vestron video", "anchor bay", "video",
+                "kino lorber", "criterion", "mgm home", "warner home", "paramount home")
+TV_OUTLETS = ("american broadcasting company", "nbc", "cbs", "hbo", "lorimar television", "showtime", "abc")
+
+
+def theatrical_distributors(film: dict) -> list:
+    return [d for d in film.get("distributors", []) if not any(k in d.lower() for k in LATER_RIGHTS)]
+
+
+def is_tv_film(film: dict) -> bool:
+    ds = [d.lower() for d in film.get("distributors", [])]
+    return bool(ds) and all(any(t == d or d.startswith(t + " ") for t in TV_OUTLETS) for d in ds)
+
+
 def studio_of(film: dict) -> str:
-    low = " | ".join(x.lower() for x in film.get("distributors", []) + film.get("companies", []))
-    for sid, keys in STUDIO_KEYS:
-        if any(k in low for k in keys):
-            return sid
+    """Map a film to a studio: documented theatrical distributor first, then production company."""
+    for source in (theatrical_distributors(film), film.get("companies", [])):
+        low = " | ".join(x.lower() for x in source)
+        for sid, keys in STUDIO_KEYS:
+            if any(k in low for k in keys):
+                return sid
     return "st-ind"
+
+
+def distributor_label(film: dict) -> str | None:
+    ds = theatrical_distributors(film)
+    return ds[0] if ds else None
 
 
 def _interp(pairs, x):
@@ -130,6 +154,8 @@ def load_historical(st: WorldState, cfg: dict, pack: dict) -> None:
     # ---- who is in the world ----
     credits = {}    # pid -> list of (film_id, date, idx)
     directing = {}
+    films = {fid: f for fid, f in films.items()
+             if not any(x in g_.lower() for g_ in f["genres"] for x in NON_FEATURE) and not is_tv_film(f)}
     for fid, f in films.items():
         for i, pid in enumerate(f["cast"][: hc["max_billing"]]):
             credits.setdefault(pid, []).append((fid, f["date"], i))
@@ -218,7 +244,8 @@ def load_historical(st: WorldState, cfg: dict, pack: dict) -> None:
         sex = rec["gender"] if rec["gender"] in ("m", "f") else ("m" if g.random() < 0.5 else "f")
         p = M.Person(id=f"wd:{pid}", name=rec["name"], gender=sex, birth=rec["birth"], roles=roles,
                      tier="A" if pid in tier_a else "B", historical=True,
-                     personality=personality, goals=G._goals(g), traits=G.traits_from_personality(personality, g),
+                     personality=personality, goals=_documented_goals(e, G._goals(g)),
+                     traits=G.traits_from_personality(personality, g),
                      provenance={"source": "wikidata", "qid": pid, "credits_pre_start": e["n_pre"],
                                  "personality": "prior (not documented)", "documented_credits_after_start":
                                      future_refs.get(pid, [])})
@@ -271,7 +298,13 @@ def load_historical(st: WorldState, cfg: dict, pack: dict) -> None:
                 p.credits.append({"project_id": None, "title": films[fid]["title"], "historical_ref": f"wd:{fid}",
                                   "role": "lead" if idx == 0 else "colead" if idx == 1 else "supporting",
                                   "year": year(dt), "genre": genre_of(films[fid]["genres"]), "kind": "prior"})
-        best = max((c for c in p.credits), key=lambda c: (c["role"] == "lead", c["year"]), default=None)
+        for fid, dt, _ in sorted(directing.get(pid, []), key=lambda x: x[1]):
+            if dt < start:
+                p.credits.append({"project_id": None, "title": films[fid]["title"], "historical_ref": f"wd:{fid}",
+                                  "role": "director", "year": year(dt), "genre": genre_of(films[fid]["genres"]),
+                                  "kind": "prior"})
+        best = max((c for c in p.credits if c["role"] != "director"), key=lambda c: (c["role"] == "lead", c["year"]),
+                   default=None) or max((c for c in p.credits), key=lambda c: c["year"], default=None)
         desc = rec.get("description") or ("director" if "director" in roles and "actor" not in roles else "actor")
         p.bio = desc[0].upper() + desc[1:] + (f"; known for '{best['title']}' ({best['year']})" if best else "") + "."
         if p.credits:
@@ -325,6 +358,21 @@ def _apply_local_billing(films: dict) -> dict:
             f = dict(f, cast=sorted(f["cast"], key=lambda q: (rank.get(q, 999), f["cast"].index(q))))
         out[fid] = f
     return out
+
+
+def _documented_goals(e: dict, prior: dict) -> dict:
+    """Career priorities inferred from the documented record (what kind of work they
+    actually pursued and were honoured for), blended with a weak prior."""
+    gen = e["genres"]
+    tot = sum(gen.values()) or 1.0
+    serious = (gen.get("drama", 0) + 0.5 * gen.get("thriller", 0)) / tot
+    popular = (gen.get("action", 0) + gen.get("comedy", 0) + gen.get("horror", 0) + gen.get("scifi", 0)) / tot
+    honours = math.log1p(e["honours_all"])
+    ev = {"prestige": 0.12 + 0.12 * honours + 0.35 * serious, "art": 0.12 + 0.45 * serious + 0.04 * honours,
+          "fame": 0.12 + 0.5 * popular, "money": 0.12 + 0.4 * popular, "stability": 0.12}
+    blend = {k: 0.7 * ev[k] / sum(ev.values()) + 0.3 * prior.get(k, 0.2) for k in ev}
+    s = sum(blend.values())
+    return {k: round(v / s, 3) for k, v in blend.items()}
 
 
 def _pct_one(pct: dict, k) -> float:
@@ -401,6 +449,24 @@ def _event(st, people, etype, date, summary, dep) -> None:
 
 
 # ------------------------------------------------------------- projects ---
+def _independent_studios(st, cfg, films: dict) -> dict:
+    """Real independent distributors become mini studios (historical releases only,
+    no generated slate). Returns label -> studio id."""
+    from collections import Counter
+    counts = Counter(distributor_label(f) for f in films.values() if studio_of(f) == "st-ind" and distributor_label(f))
+    out = {}
+    for label, n in sorted(counts.items()):
+        if n < 3:
+            continue
+        sid = "st-x-" + "".join(ch for ch in label.lower() if ch.isalnum())[:24]
+        if sid not in st.studios:
+            st.studios[sid] = M.Studio(id=sid, name=label, tier="mini", cash=20e6, slate_per_year=0, budget_median=2.0,
+                                       risk_appetite=65, historical=True,
+                                       provenance={"source": "wikidata distributor", "films_in_pack": n})
+        out[label] = sid
+    return out
+
+
 def _historical_projects(st, cfg, pack, in_world) -> None:
     hc = cfg["history"]
     start = st.date
@@ -410,12 +476,17 @@ def _historical_projects(st, cfg, pack, in_world) -> None:
     counts = {}
     used = {p.title for p in st.projects.values()}
     sl_pct = _pct({fid: f.get("sitelinks", 0) for fid, f in films.items()})
+    indie = _independent_studios(st, cfg, films)
     for fid, f in sorted(films.items(), key=lambda kv: (kv[1]["date"], kv[0])):
         if not (recent <= f["date"] < horizon):
             continue
-        if any(x in g_.lower() for g_ in f["genres"] for x in NON_FEATURE):
+        if any(x in g_.lower() for g_ in f["genres"] for x in NON_FEATURE) or is_tv_film(f):
             continue
+        if not any(c in in_world for c in f["cast"][: hc["max_billing"]]):
+            continue          # never invent a cast for a real film (catches untagged documentaries too)
         sid = studio_of(f)
+        if sid == "st-ind" and distributor_label(f) in indie:
+            sid = indie[distributor_label(f)]
         studio = st.studios.get(sid) or st.studios["st-ind"]
         g = R.stream(st.seed, "historical-film", fid)
         genre = genre_of(f["genres"])
@@ -433,6 +504,8 @@ def _historical_projects(st, cfg, pack, in_world) -> None:
                       budget=round(float(budget), 0), created=add_days(start, -400), script_quality=round(script, 2),
                       hook=round(hook, 2), breadth=round(gcfg["breadth"] * math.exp((hook - 50) / 50 * 0.6) * math.exp(g.normal(0, 0.3)), 4),
                       historical_ref=f"wd:{fid}")
+        p.distributor_note = distributor_label(f) or ("distributor not documented" if studio.id == "st-ind" else None)
+        p.date_approx = f.get("date_precision", "day") != "day"
         tilt_noise = g.dirichlet([6, 6, 6, 6]) * 4
         p.segment_tilt = {s: round(float(t * n), 3) for s, t, n in zip(cfg["box_office"]["segments"], gcfg["tilt"], tilt_noise)}
         real_m = budget / 1e6 / market.infl(cfg, year(f["date"]))
@@ -440,20 +513,32 @@ def _historical_projects(st, cfg, pack, in_world) -> None:
         p.post_weeks = int(g.integers(*cfg["development"]["post_weeks"]))
         used.add(p.title)
         # roles from billing order
-        cast = [c for c in f["cast"][: hc["max_billing"]] if c in in_world][:4]
+        cast = [c for c in f["cast"][: hc["max_billing"]] if c in in_world]
         for i, cpid in enumerate(cast):
             person = st.people[f"wd:{cpid}"]
-            imp = "lead" if i == 0 else "colead" if i == 1 else "supporting"
+            imp = "lead" if i == 0 else "colead" if i == 1 else "supporting" if i < 4 else "featured"
             age = age_on(person.birth, f["date"])
             rid = st.new_id("rol")
-            role = M.Role(id=rid, project_id=pid, name=f"role {i + 1}", importance=imp, gender=person.gender,
+            char = f.get("characters", {}).get(cpid)
+            role = M.Role(id=rid, project_id=pid, name=char or P.character_name(g, person.gender), importance=imp,
+                          gender=person.gender, name_documented=bool(char),
                           age_min=max(8, age - 6), age_max=age + 6, register=genre,
-                          screen_share={"lead": 0.45, "colead": 0.28, "supporting": 0.09}[imp],
+                          screen_share={"lead": 0.45, "colead": 0.28, "supporting": 0.09, "featured": 0.03}[imp],
                           description=G.N.ROLE_DESC[imp], intended=person.id)
             st.roles[rid] = role
             p.role_ids.append(rid)
         if not p.role_ids:
             G._make_roles(st, cfg, p, g)
+        else:
+            lo, hi = cfg["casting"]["featured_roles"]
+            for _ in range(max(0, int(g.integers(lo, hi + 1)) - max(0, len(cast) - 4))):   # undocumented parts
+                gen = "m" if g.random() < 0.55 else "f"
+                c = int(g.integers(18, 70))
+                rid = st.new_id("rol")
+                st.roles[rid] = M.Role(id=rid, project_id=pid, name=P.character_name(g, gen), importance="featured",
+                                       gender=gen, age_min=max(16, c - 8), age_max=c + 8, register=genre,
+                                       screen_share=0.03, description=G.N.ROLE_DESC["featured"])
+                p.role_ids.append(rid)
         st.projects[pid] = p
         G.schedule_from_release(cfg, p, f["date"], g)
         _fit_schedule(cfg, p, [st.people[st.roles[r].intended] for r in p.role_ids if st.roles[r].intended], f["date"], g)

@@ -6,8 +6,20 @@ from hsim.narrator import reply as RPL
 from hsim.systems import personal
 from hsim.systems import tick as T
 
-HIDDEN_WORDS = ["talent", "satisfaction", "attraction", "studio_max", "script_quality", "reception_shock",
-                "breadth", "segment_tilt", "personality", "performance"]
+HIDDEN_KEYS = {"talent", "craft", "presence", "satisfaction", "attraction_ab", "attraction_ba", "studio_max",
+               "script_quality", "hook", "reception_shock", "breadth", "segment_tilt", "personality", "performance",
+               "affinity", "bankability", "quality", "goals_raw"}
+
+
+def _keys(obj, out):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            out.add(str(k))
+            _keys(v, out)
+    elif isinstance(obj, list):
+        for v in obj:
+            _keys(v, out)
+    return out
 
 
 def _game(tmp_path, cfg, params, weeks=12):
@@ -19,10 +31,10 @@ def _game(tmp_path, cfg, params, weeks=12):
 
 def test_packet_contains_no_hidden_values(tmp_path, cfg, params):
     g = _game(tmp_path, cfg, params, weeks=30)
-    text = g.command({"type": "packet"})["text"]
-    lower = text.lower()
-    for w in HIDDEN_WORDS:
-        assert w not in lower, w
+    r = g.command({"type": "packet"})
+    text = r["text"]
+    keys = _keys(r["packet"], set())
+    assert not (keys & HIDDEN_KEYS), keys & HIDDEN_KEYS
     pl = g.state.player
     assert f"{pl.talent}" not in text and f"{pl.craft}" not in text
 
