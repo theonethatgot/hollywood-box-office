@@ -1,704 +1,633 @@
-# Hollywood Simulator — Technical Design (v0.2, pre-code)
+# Hollywood Simulator: Technical Design (v0.3, pre-code)
 
-Scope of this document: architecture, data models, simulation processes, economic
-formulas, calibration strategy and implementation phases for a persistent
-1980–2026 entertainment-industry simulation, starting with film acting.
+A persistent, historically grounded entertainment-industry simulation (1980–2026),
+starting with film acting careers. A Python engine owns all state, numbers and
+outcomes. ChatGPT (or any LLM) is the narrator: it turns engine outcomes into
+scenes and can *propose* consequential developments, which the engine adjudicates.
 
-**Status legend** used throughout:
-`[P1]`…`[P6]` = the phase in which a feature is planned. Nothing here is
-implemented yet except the throwaway box-office sketch in
-`prototypes/box_office_sketch.py` (see §6.7).
+**Status legend:** `[S]` = in the first playable vertical slice. `[P2]`…`[P6]` =
+later phases (§11). **Nothing in this document is implemented yet** except two
+throwaway prototypes in `prototypes/` (§7.6).
 
-All historical figures quoted below are **approximate reference values to be
-verified** during Phase 0 data collection. None is hard-coded as a target result.
+All historical figures quoted are approximate reference values to be verified
+during data collection. None is used as a target outcome or ceiling.
+
+### What changed from v0.2
+- Start year is a **parameter**. Any year with data can be loaded as a historical
+  snapshot without simulating earlier decades (§4).
+- Population comes from a tiered, **automatically built historical database** plus
+  generated professionals, with no hand-managed careers (§3).
+- Real personal-life history is **included** with provenance and causal
+  dependencies, replacing the v0.2 blanket exclusion (§3.6).
+- Time advancement is **interruptible**, with delegation of routine matters (§6.2).
+- The upper box-office tail is modelled through audience behaviour and physical
+  capacity, with no historical ceilings and no jackpot rolls (§7).
+- **Narrator integration is part of the first playable slice**, not Phase 6 (§8).
 
 ---
 
-## 1. Design principles → engineering rules
+## 1. Principles → engineering rules
 
-| Principle | Concrete engineering rule |
+| Principle | Rule |
 |---|---|
-| Engine owns the truth | All numbers live in engine state. The narrator receives a read-only *fact packet* and can only submit *commands* that the engine validates. |
-| No rubber-banding | **The player is an NPC with a human controller.** Player and NPC actors go through identical code paths; no function takes `is_player` as an input to an outcome calculation. A test enforces this (§7.4). |
-| Causal randomness | Randomness only enters as *realised shocks on top of causes* (e.g. audience reception shock, audition-day variance). Every random draw is logged with its inputs. |
-| History as prior, not script | Real history seeds initial state and future *intentions* (projects, attachments, debuts). Outcomes are always simulated. |
-| Imperfect information | Every entity attribute has a hidden **true value** and zero or more **observations** with noise/bias. The UI and narrator only see observations. |
-| No single star-power number | Actor value is a vector; film demand is the sum of many segment-level mechanisms. |
-| Configurable | Every coefficient lives in versioned YAML config, by era where needed. Code contains structure, not magic numbers. |
-| Reproducible | `state(t) = f(seed, initial_data, config_version, ordered_command_log)`. |
+| Engine owns canon | All quantities and consequential outcomes are engine state. The narrator receives packets and returns *choices* and *proposals*; nothing it writes changes state without adjudication. |
+| One rulebook | **The player is an NPC with a human controller.** No outcome function takes "is player" as an input. Undecided player choices are made by the player character's own NPC utility, using their stated goals. |
+| Causal randomness | Random draws only perturb causes (reception, audition-day form), drawn from the same distributions for everyone, and every draw is logged with its inputs. |
+| History is the starting point, not a script | Real history supplies initial state, baseline future intentions and documented events. Outcomes are simulated, and documented events re-check their causal preconditions (§3.6). |
+| No ceilings | The only hard limits are physical and economic: population, seats, screens, time, money. No historical record is referenced by any outcome formula. |
+| Imperfect information | Hidden *true* values vs *observed* estimates. Players, studios and the narrator see observations only. |
+| Provenance | Every fact about a real person carries a source and a verification status. Rumours stay labelled as rumours, and **no damaging allegation about a real person is ever generated**. |
+| Configurable and reproducible | Coefficients live in versioned YAML. `state = f(seed, data_version, config_version, command_log)`. |
 
 ---
 
 ## 2. Architecture
 
 ```
-hollywood-sim/
+hollywood-box-office/
   engine/
-    core/
-      clock.py          # calendar, weekly tick, scheduled-event queue
-      rng.py            # named deterministic RNG streams
-      events.py         # immutable event log (audit trail)
-      state.py          # WorldState container, entity registries, indexes
-      commands.py       # command schema + validation (player & narrator input)
-      ledger.py         # double-entry money accounting
-      config.py         # YAML loading, era interpolation, config hashing
-    models/             # dataclasses: Person, Project, Film, Studio, ...
-    systems/            # one module per simulation process (§4)
-      market.py  development.py  studio_ai.py  packaging.py  casting.py
-      negotiation.py  production.py  post.py  release.py  box_office.py
-      reception.py  ancillary.py  awards.py  careers.py  finance.py
-      npc_ai.py  relationships.py  history.py  intel.py  news.py
-    io/
-      save.py           # snapshot + event log, schema-versioned
-      factpacket.py     # player-visible state export for the AI narrator
+    core/        clock.py rng.py events.py state.py ledger.py config.py commands.py
+    models/      person.py project.py film.py studio.py agency.py market.py history.py
+    systems/     market development studio_ai packaging casting negotiation
+                 production post release box_office reception ancillary awards
+                 careers finance relationships personal_life npc_ai intel news
+    service.py   ← the ONLY entry point for front ends (JSON in/JSON out)
+    narrator/    packet.py  response_parser.py  adjudicator.py  continuity.py
+    io/          save.py (SQLite) snapshot.py
+  datapipe/      # build-time only; turns public sources into a historical DB
+    fetch_wikidata.py  fetch_imdb.py  normalize.py  estimate.py  compile_snapshot.py
   data/
-    eras/               # year-indexed market tables (ticket price, admissions...)
-    seed_1980/          # real people, studios, agencies, projects in pipeline
-    history_intents/    # future historical projects/debuts as soft priors
-    names/              # generators for fictional NPCs
-  config/
-    default.yaml        # all formula coefficients
-  cli/                  # command-line front end
-  api/                  # [P6] FastAPI wrapper over the same engine
-  tools/
-    batch.py            # run N seeds × M years headless
-    calibrate.py        # compare simulated distributions vs reference data
-    replay.py           # rebuild state from command log, verify hash
-    inspect.py          # query hidden state / event provenance (debug only)
+    history/     # built historical DB (see §3.4 on what may be committed)
+    overrides/   # human/LLM corrections with provenance (YAML)
+    eras/        # year-indexed market tables
+    reference/   # calibration statistics (CSV + source notes)
+  config/        default.yaml
+  cli/           hsim (command line front end)
+  tools/         batch.py calibrate.py replay.py inspect.py
   tests/
 ```
 
-### 2.1 Time model
-- **Date resolution: one day. Simulation tick: one week** (Friday-to-Thursday, matching
-  box-office reporting). Within a tick, systems run in a fixed order (§4.1).
-- A **scheduled-event queue** (priority queue keyed by date + stable sequence id)
-  carries things like "principal photography wraps", "offer expires", "Oscar
-  nominations announced". Projects advance on their own timelines independent of turns.
-- The player chooses how far to advance: `advance 1w`, `advance until <event>`,
-  or `advance 3m` with *interrupts* (an offer arrives, an audition is scheduled, a
-  decision is required) that pause time.
+**Service layer.** Every front end (the CLI, the file-based ChatGPT workflow and,
+later, an MCP server or web app) calls the same `service.py` functions with JSON:
+`new_game`, `load`, `advance`, `decide`, `submit_response`, `packet`, `rewind`,
+`query`. That is what keeps the CLI and file workflow in the slice from becoming
+throwaway code.
 
-### 2.2 Determinism and RNG
-- **Named streams:** each draw uses `rng(seed, system, entity_id, purpose, date)`
-  (hash-derived, as in the prototype). Adding a new system or a new NPC does
-  **not** shift any other random outcome, which keeps saves and A/B calibration stable.
-- Iteration over entities is always in sorted-id order; no reliance on dict/set ordering.
-- Floating-point: plain Python floats/numpy float64, no parallel reductions in the
-  canonical path (batch tools may parallelise *across* seeds, never within one).
+**Time:** dates have day resolution, and the world simulates in weekly ticks
+(Friday to Thursday, matching box-office weeks). A scheduled-event queue handles
+mid-week items (offer deadlines, start dates).
 
-### 2.3 Persistence and auditability
-- **Save = snapshot + event log + command log + config hash + data version.**
-- Snapshot format: SQLite (one table per entity type + JSON columns for vectors).
-  SQLite is chosen over JSON because a 46-year world will hold tens of thousands
-  of films/people and we need queries (filmographies, weekly charts).
-- **Event log:** append-only rows `{event_id, date, system, type, entity_ids,
-  inputs_digest, random_draws, outputs}`. Any number shown to the player can be
-  traced: `inspect why film:1043.domestic_gross` lists the contributing events.
-- **Replay test:** load an older snapshot, re-apply the command log, and the final
-  state hash must match the saved hash.
+**Determinism:** every draw comes from a named stream,
+`rng(seed, system, entity_id, purpose, date)`, as in the prototypes. Adding
+systems, people or data never reshuffles other draws. Entities are always
+iterated in sorted-id order.
 
-### 2.4 AI narrator boundary
-```
- engine ──fact packet (JSON, player-visible only)──▶ LLM narrator
- engine ◀──command proposals (JSON schema)──────── LLM / player
-```
-- The fact packet contains only **observations** the player character could know
-  (never hidden true values) plus canonical public facts (reported grosses, awards).
-- Narration may invent colour (dialogue, settings, weather) but not quantities.
-  `[P6]` A post-check extracts numbers and named outcomes from the narration and
-  flags any that don't appear in the packet.
-- Narrator-proposed actions ("call your agent and push for points") become
-  commands and go through the same validation as CLI input.
+**Saves:** a SQLite snapshot, plus append-only event and command logs, plus the data
+and config versions. A replay must reproduce the snapshot's state hash. `[S]`
+**Branches:** `rewind` to any earlier packet creates a branch save, so a bad
+narrator session is recoverable.
 
 ---
 
-## 3. Data models
+## 3. Historical database and population (answers Q1, Q4, Q5)
 
-Notation: `T` = hidden true value, `O` = observable estimate (see §3.9).
-Scales are 0–100 unless noted; vectors are keyed dictionaries.
+### 3.1 Sources investigated
 
-### 3.1 Person (shared base for actors, directors, writers, producers, executives)
+| Source | Gives us | Licence / access | Role |
+|---|---|---|---|
+| **Wikidata** (SPARQL / dumps) | People, birth/death dates, citizenship, occupations, spouses with start/end dates, awards with dates, film cast/director/producer, release dates, some budgets/grosses, studio ownership | **CC0**: free to store, commit and redistribute | **Primary backbone** `[S]` |
+| **IMDb non-commercial datasets** (`name.basics`, `title.basics`, `title.principals`, `title.ratings`) | Near-complete credits with **billing order**, professions, ratings and vote counts | Personal, non-commercial use only. **Must not be republished or used to build a redistributable database.** | Optional *local* enrichment, never committed `[S]` |
+| **Wikipedia** | Biographies, career narratives, documented personal events, yearly box-office lists | CC BY-SA (attribution, share-alike) | Build-time extraction of events and personality descriptors for major figures `[P2]` |
+| **TMDB API** | Cast/crew, popularity, budgets/revenues (community-maintained) | Free API key, attribution, non-commercial | Optional cross-check `[P2]` |
+| Box Office Mojo / The Numbers | Weekly and yearly grosses | No open licence; no bulk scraping | Manual spot-checks only; calibration uses aggregate statistics |
+| Annual exhibitor-poll lists of top box-office stars, Academy database, MPA/NATO statistics | Bankability rankings by year, nominations, admissions, ticket prices | Facts are reusable; record sources | **Anchors** for validating the estimator `[S]` |
+
+**Your repository is public**, so anything derived from IMDb must stay local
+(gitignored) and be rebuilt on your machine by the pipeline. Everything committed
+is built from CC0/attributed sources.
+
+**Network note:** this cloud session currently blocks `query.wikidata.org`,
+`datasets.imdbws.com` and `api.themoviedb.org`. When we build the pipeline, I'll ask
+for those hosts to be allowed (or you can run the pipeline locally).
+
+### 3.2 Tiers and realistic population size
+
+People are tiered by **detail and simulation cost**, not by importance to the story.
+Any tier can be promoted when they become relevant.
+
+| Tier | Who | Data held | Per snapshot (est.) | Slice target |
+|---|---|---|---|---|
+| **A: rich** | Stars, top directors, studio heads, top agents, anyone with notable billing in recent big releases | Full attribute vector, personality, relationships, documented personal history, finances | ~300–600 | ~200 |
+| **B: working** | Credited professionals active in the last ~5 years with significant roles | Full professional attributes, estimated personality priors, light personal history | ~4,000–8,000 | ~2,000 |
+| **C: dormant** | Everyone else in the historical DB (minor credits, inactive, future debutants) | Name, dates, filmography; attributes computed **on demand** | tens of thousands | all available |
+| **G: generated** | Fictional professionals filling gaps (unknowns, generic supporting actors, crew-level directors) | Same model as B | Tops up each role pool to realistic size | ~1,000 |
+
+**Why these numbers:** a 1980s year had a few hundred US releases with perhaps
+10–15 meaningful credited roles each, so a few thousand significant acting roles
+per year spread over a few thousand working actors, plus a few hundred active
+directors. Tier B covers the people who actually compete for roles. Generated
+people mostly fill the "unknown newcomer" and "jobbing supporting actor" pools,
+which the historical record covers thinly.
+
+**Lazy promotion:** when a Tier C person enters a candidate pool (for example,
+the casting filter needs a 25-year-old comedic actor), their attributes are
+computed by the same estimator (§3.5) **using only information up to the current
+simulation date**. They are seeded by person id, so the result is deterministic.
+
+**Performance budget:** the slice should simulate one world-year in under ~2
+seconds with ~3,000 active people and ~300 projects, so batch calibration of
+hundreds of seeds is practical. Casting uses indexed pre-filters (age, gender,
+register, availability), not full scans.
+
+### 3.3 Identity and continuity
+- Canonical ids: `wd:Q…` (Wikidata) for real people, films and studios; IMDb `nm…`
+  ids kept as local cross-references; generated people use `gen:<hash>`.
+- Every save records the **data-pack version** it was built from.
+- **Adding real people to an existing save** (for example, after a data expansion):
+  - If their real debut is after the current simulation date, they join the
+    debut pipeline normally.
+  - If their debut is earlier, they are inserted with estimator-derived
+    attributes. Only their credits on films that **also exist in this simulated
+    world** count, and missing credits become "earlier uncatalogued work", which
+    lowers their fame accordingly. They never retroactively change past events.
+    An event records the registration.
+- Removing or renaming people never happens in-save. Corrections apply through
+  overrides on the next new game, or through an explicit migration.
+
+### 3.4 Pipeline (build-time, automated) `[S]`
+1. **Fetch:** run Wikidata queries per decade (people with acting/directing/
+   producing occupations linked to US-distributed films, studios, awards, spouses,
+   deaths). Optionally join the local IMDb files for billing order and full credits.
+2. **Normalise:** merge ids, resolve duplicates, derive each person's credits
+   timeline with billing, the film's release date and the film's known gross.
+3. **Estimate:** compute attributes for any requested date (§3.5).
+4. **Validate:** compare against anchor lists (yearly top box-office stars,
+   nominations, reported salaries) and produce an **anomaly report** (the top N
+   biggest disagreements), not a review queue.
+5. **Compile snapshots:** see §4.
+
+Nobody hand-maintains careers. After the start date, every career is produced by
+the engine.
+
+### 3.5 Systematic estimation of starting attributes (answers Q5)
+**Rule: public and observable attributes use only information dated on or before
+the start date. Hidden innate traits may use the whole real career (hindsight), with
+shrinkage.**
+
+This is what makes the historical world behave plausibly while still diverging.
+A 1980 unknown who later became a great actor starts unknown, but with high hidden
+talent. Whether that potential is realised depends on simulated opportunities.
+`hindsight_weight` is configurable (default 0.5; 0 means "everyone is judged only
+by what was known").
+
+| Attribute | Evidence (only up to the start date, except where marked H) |
+|---|---|
+| `fame[region]` | Σ credits × film admissions × billing weight × recency decay; TV-series regular exposure |
+| `bankability` (industry belief) | Openings/grosses of films they headlined vs comparable films; anchor-list rank (yearly top-star polls) |
+| `critical_rep` | Ratings/critic reception of their films weighted by role size; critics' awards |
+| `prestige` | Major nominations/wins (time-decayed); prestige collaborators |
+| `heat` (momentum) | Last 2–3 years' outcomes vs expectations |
+| `craft` / experience | Credit count and size, years active, stage background where recorded |
+| `quote` | Reported fees if documented; otherwise derived from bankability and era pay scale |
+| `typecasting` | Genre/persona distribution of past roles weighted by billing |
+| `talent`, `presence` (H) | Career-wide quality signals (awards, ratings of lead work, longevity), shrunk toward the population prior |
+| Personality, goals | Priors by profile; for Tier A, build-time extraction from biographies into a fixed schema with a citation per trait `[P2]` |
+
+Raw evidence scores are converted to **within-year percentiles**, then mapped onto
+configured target distributions, so the 1980 and 2004 worlds have comparable scales.
+
+**Corrections:** `data/overrides/*.yaml` entries
+`{id, field, value | delta, reason, source, author}` are applied after estimation
+and versioned. Typical use: a handful of famous figures whose estimates look wrong
+in the anomaly report. Neither you nor I are expected to review hundreds.
+
+### 3.6 Real personal lives and historical events (answers Q4) `[S basic, P2 full]`
+
+**HistoricalEvent record**
 ```
-Person
-  id, name, birth_date, gender, nationality, is_historical, debut_date
-  roles: set[{actor, director, writer, producer, executive, agent}]
-  personality:       ambition, risk_tolerance, artistic_vs_commercial (−1..1),
-                     loyalty, temperament, discipline, ego
-  goals:             weighted {money, fame, prestige, artistic, stability, power}
-  health/energy      (T) energy 0–100 (burnout from back-to-back shoots), health
-  relationships      → RelationshipGraph edges
-  finances           → Account
-  calendar           list[Commitment] (shoots, press tours, holds, holidays)
-  reputation_events  list[event_id] (professional incidents, praise)
+id, people[], type (marriage, divorce, child, death, illness, legal, scandal,
+                    public statement, relocation, ...)
+date, public_date (when it became publicly known; drives the information layer)
+verification: documented | disputed | rumour
+sources[] (url/title/date), summary (neutral wording)
+dependency: { kind: independent | production | relationship | career | circumstance,
+              requires: [conditions] }
 ```
 
-### 3.2 ActorProfile (the multidimensional career, requirement 4)
-| Field | T/O | Meaning |
+**How documented events play out in an alternate history.** Each tick, the engine
+checks upcoming documented events against their dependencies:
+
+| Dependency | Example | Engine behaviour |
 |---|---|---|
-| `talent` | T | Innate expressive ability. Mostly stable; no ceiling enforced. |
-| `craft` | T | Learned technique; grows with work, training, strong directors; slow decay when idle. |
-| `range` | T | vector over registers `{drama, comedy, action, romance, horror, period, musical, character}`: competence per register. |
-| `presence` | T | Screen charisma; drives audience appeal more than critic response. |
-| `look_market_value` | T | How the *market* currently values their appearance for leading roles; follows an age curve whose shape is configurable by era and gender (models real industry bias, not a judgement). |
-| `fame` | T | vector per region `{US, EU, JP, LATAM, CN, ROW}`: share of the population who recognise them. |
-| `appeal` | T | vector per audience segment: how much a recogniser wants to see them. |
-| `loyalty` | T | per segment: fanbase that turns out regardless of reviews (front-loads openings). |
-| `true_draw` | T | **Not stored.** Emerges from fame × appeal × loyalty in the demand model. |
-| `bankability` | O | The **industry's belief** about draw: a Bayesian estimate from attributed track record. It can diverge from reality (overrated or underrated stars). |
-| `critical_rep` | O-ish | Critics' running assessment (EWMA of reviewed performances). |
-| `prestige` | O-ish | Industry standing: awards, prestige collaborators, guild respect. |
-| `typecasting` | T | vector over persona/genre tags; high values raise fit for similar roles and lower casting odds against type (studios' perception). |
-| `momentum` (heat) | O | Recency-weighted *surprise*: outcomes vs expectations. Beating expectations creates heat, not just success. |
-| `quote` | O | Last fee: the anchor for negotiation. |
-| `professionalism` | T | Reliability on set; leaks into the industry as rumours. |
-| `scandal_risk` | T | Hazard of reputation events (**disabled by default for real living people**, §4.15). |
+| independent | A death from long-term illness; a birth to an established couple | Occurs on schedule. A divergent career is not a reason to remove it. |
+| production | An accident on a specific film set | Occurs only if that production exists with that person on set at that time. It is **never relocated** to another production. |
+| relationship | A marriage between two people who met on a film | If they met in the simulation, it proceeds with its hazard. If not, probability falls to a base rate of meeting through other channels (shared agency, social circle, other projects). |
+| career / circumstance | An event documented as tied to sudden fame or financial pressure | Hazard is scaled by whether the circumstance holds in-sim. |
 
-### 3.3 Director / Writer / Producer profiles
-- **Director:** `vision, technical, actor_direction` (improves performances and
-  craft growth), `budget_discipline`, `commercial_instinct`, `genre_skill` vector,
-  `auteur_power` (final-cut leverage), `bankability`, `prestige`.
-- **Writer:** `structure, dialogue, originality, genre_skill`; drafts carry quality.
-- **Producer/Executive:** `taste` (accuracy of quality judgement), `risk_appetite`,
-  `network`, `packaging_skill`.
-
-### 3.4 Agency / Agent
-```
-Agency: id, tier (CAA-type to boutique), clients, packaging_power, info_quality
-Agent:  person_id, agency_id, hustle, negotiation_skill, relationships,
-        client_list (capacity), commission (10% default)
-```
-The agent's quality affects which offers reach the client, how accurate the
-client's information is, and leverage in negotiation. NPC agents also drop
-clients with low return on time.
-
-### 3.5 Studio / Distributor
-```
-Studio: id, name, parent_company, cash, debt, credit_line, overhead_per_year,
-        distribution_reach {region: 0..1}, marketing_efficiency,
-        slate_strategy {tentpole_share, genre_weights, budget_bands},
-        exec_regime (head of production person_id; tastes shift with changes),
-        risk_appetite, library_value, relationships, output_deals
-```
-Studios can expand, shrink, fall into distress, be sold or merge. Historical
-mergers are **pressures with probability**, not forced (§4.14).
-
-### 3.6 Project (lifecycle state machine)
-```
-Project
-  id, title, source {original, novel, remake, sequel, IP: franchise_id}
-  genre (primary + secondary), rating_target, premise_hook (T)
-  script: {draft_no, quality (T), structure, dialogue, originality, writers[]}
-  stage: IDEA → DEVELOPMENT → PACKAGING → GREENLIT → PREPRO → SHOOTING
-         → POST → AWAITING_RELEASE → RELEASED → (ANCILLARY windows)
-         ↘ TURNAROUND / SHELVED / DEAD   (any stage)
-  owner_studio, producers[], director, roles[], attachments[]
-  budget: {planned, ATL, BTL, contingency, actual_to_date}
-  schedule: {prepro_start, shoot_start, shoot_weeks, wrap, post_weeks, release_date}
-  stage_history (audit), dev_hell_counter
-Role
-  id, project_id, name, importance {lead, co-lead, supporting, cameo}
-  screen_time_share, age_range, gender, persona_tags, register_demands vector,
-  star_requirement (from budget & studio), cast: person_id?, contract_id?
-```
-
-### 3.7 Contracts, offers, auditions
-```
-Offer:    role_id, to_person, from {studio, director}, type {direct, audition_invite,
-          screen_test}, terms_proposed, expires, pay_or_play?, exclusivity_window
-Audition: role_id, person_id, date, prep_days, result_score (T), feedback (O)
-Contract: role_id, fixed_fee, pay_schedule, backend {type: gross|adjusted_gross|
-          net|cash_breakeven, points, triggers}, bonuses {box_office, awards},
-          billing, perks, options (sequel options with escalators), holds
-```
-
-### 3.8 Film (released) and box-office records
-```
-Film: project_id, release_plan {date, pattern: wide|platform|limited, screens_by_region},
-      marketing {spend_by_week, creative_quality}, true_quality vector
-      {craft, entertainment, emotional, originality, spectacle},
-      critic_score, audience_score_by_segment, reception_shock (logged)
-BoxOfficeWeek: film_id, region, week_no, date, screens, gross, admissions, rank
-Revenue/CostLine: film_id, stream (theatrical_dom, intl, video, payTV, TV, SVOD...),
-      amount, date, counterparty → posted to Ledger
-```
-
-### 3.9 Information layer
-```
-Observation: subject (entity.attr), observer (person/studio/"public"),
-             value, uncertainty (σ), bias, source {tracking, trades, agent,
-             rumour, test_screening, official}, date, decays_after
-```
-- `intel.py` generates observations each tick: trade-press projections, NRG-style
-  tracking (awareness/interest with sampling noise), test-screening scores,
-  agent gossip about competing actors and offers, salary rumours.
-- **Who sees what:** the player sees `public` observations plus those of their
-  own agent/manager (quality depends on agent `info_quality` and relationships).
-- Studios make decisions on **their own observations**, never on true values.
-  This is what produces believable misjudgements.
-
-### 3.10 Relationships
-Directed weighted edges: `affinity (−100..100), trust, respect, history[]`
-(worked together, outcome, conflict, favour owed). Updated by shared projects
-(good shoot or success → up; overruns, ego clashes or flops → down), negotiations
-(hardball costs affinity), and introductions. Directors and producers re-hire
-people they trust (a real and powerful career mechanism).
-
-### 3.11 Money
-Double-entry `Ledger` with `Account`s for every person, studio, agency and
-the government (tax). Every transfer is a balanced entry, so total money is
-conserved except for explicit sources/sinks (consumer spending in, taxes out,
-which is what makes the conservation test possible).
-
-### 3.12 Market state (per year/week)
-```
-MarketState: date, region tables {population_by_segment, admissions_trend,
-             avg_ticket_price, screens_total, inflation_index},
-             genre_appetite vector (evolving; see §4.2), tech_era flags
-             {vhs, dvd, bluray, svod, pvod}, window_lengths, union_rates,
-             disruptions {strike, pandemic} (structural history, §4.14)
-```
+- **Rumours** enter only the information layer, labelled as rumours, with their
+  real circulation dates. They never become canon for mechanics.
+- **Generation rules for real people:** the engine may generate *neutral or
+  professional* developments (friendships, professional feuds arising from simulated
+  interactions, new collaborations, and romantic relationships between real people
+  only when they arise from simulated contact and the configuration allows it).
+  It **never generates** crimes, abuse or misconduct allegations, addiction, illness
+  or deaths for real people. Those occur only when documented.
+- Fictional NPCs get the full generated personal-life system (hazards driven by
+  personality, stress, money and fame).
+- **World context timeline** `[S light]`: documented non-film events (elections,
+  recessions, cultural moments) affect the market (for example, recession demand
+  elasticity) and are passed to the narrator as atmosphere.
 
 ---
 
-## 4. Simulation processes
+## 4. Start-year snapshots (answers Q2)
 
-### 4.1 Weekly tick order
-1. `market` — macro update, genre appetites drift, structural events.
-2. `npc_ai` — goal re-evaluation (people & studios choose intentions).
-3. `development` — scripts progress, rewrites, stalls, turnarounds.
-4. `studio_ai` — greenlight committee, slate balancing, release dating.
-5. `packaging` / `casting` — director attachment, casting calls, auditions, offers.
-6. `negotiation` — open deals advance one round.
-7. `production` — shoot days elapse; on-set events; overruns.
-8. `post` — editing, VFX, test screenings, reshoots.
-9. `release` — marketing spend, screen bookings, openings.
-10. `box_office` — weekly demand for all films in release, all regions.
-11. `reception` — reviews on release; audience scores; word of mouth.
-12. `ancillary` — window revenues for older titles.
-13. `awards` — season calendar (precursors → nominations → winners).
-14. `finance` — payments, commissions, residuals, expenses, interest.
-15. `careers` — stat updates from completed events.
-16. `relationships`, `intel`, `news` — observations and headlines generated.
+`compile_snapshot(date)` builds an initial world **directly from the historical DB**,
+without simulating earlier decades:
 
-### 4.2 Market and genre cycles
-Each segment's `genre_appetite[g]` follows a mean-reverting random walk **plus
-endogenous feedback**: a run of hits in a genre raises appetite briefly, then
-saturation lowers it (`appetite += α·recent_hit_signal − β·recent_supply`).
-Studios chase the *observed* trend, which naturally produces cycles of boom and
-glut (slasher boom, superhero era) without scripting them.
+1. **People:** everyone alive with a career by that date gets a tier. Attributes
+   come from §3.5 as of that date. Relationships are seeded from collaboration
+   history (worked together and the outcomes), shared agencies and documented marriages.
+2. **Studios and agencies:** ownership, executives, approximate finances and
+   output deals as of that date.
+3. **Recent past (read-only canon):** films released in roughly the prior 3 years,
+   with real grosses and reception, so bankability, heat and genre trends have context.
+4. **Pipeline in progress:** films historically released in the next roughly 2–3
+   years become projects whose **stage is inferred** from the release date minus
+   typical durations (or real production dates when known), with real attachments
+   as high-prior intentions. A film shooting in March 1980 is mid-production at
+   start, but a slipped schedule or recasting can still change it.
+5. **Future intentions:** later historical films are soft seeds that appear near
+   their real development dates (see `docs/design-v0.2.md` §4.14). Future people
+   enter through the debut pipeline.
+6. **Market and era:** ticket prices, admissions, screens, windows, technology
+   flags, union scales, genre appetites (estimated from recent genre performance)
+   and world context.
 
-### 4.3 Development
-- Ideas are spawned by writers, producers, studios, IP acquisitions and
-  historical intents. Each has a hidden `premise_hook` and initial script quality.
-- Per draft: `quality_new = quality + writer_skill_gain + N(0, σ_draft)`, with
-  diminishing returns. Too many cooks (multiple rewriters) adds variance and a
-  slight penalty to originality.
-- **Development hell** hazard per week rises with time in development, key
-  departures and exec-regime changes. Projects can go to turnaround and be picked
-  up by another studio (with their prior attachments partially intact).
+**Slice support:** the first data build covers people and films around 1975–1990,
+so **any start date from Jan 1980 to about 1985 works**. Adding 1990, 2004 or 2015
+later is a data expansion, not an engine change `[P4]`.
 
-### 4.4 Studio greenlight (studio_ai)
-A studio greenlights if its **own estimate** of risk-adjusted value clears a hurdle:
-```
-EV_studio = E_obs[ultimate_revenue] − budget − E[P&A] − overhead
-Greenlight if  EV_studio / (budget + P&A) > hurdle(risk_appetite, cash_position)
-           and  slate constraints (genre mix, release slots, capital) hold
-```
-`E_obs` comes from the studio's forecasting model, which uses *observed*
-bankability, genre trend observations and comparable films, plus exec taste
-noise. Good execs (high `taste`) have smaller error. This is where "nobody knows
-anything" emerges.
+**Protagonist creation** `[S]`: choose a background (birth year, training, origin),
+a starting position, and goals that the delegation logic uses:
+- **Unknown:** no credits; some stage/commercial background; a small agency.
+- **Working actor:** generated back-catalogue of supporting roles in fictional
+  films, with modest fame, a mid-tier agent and a quote to match.
+- **Established star:** generated hit history, high bankability, a top agent and
+  existing relationships with real figures, all consistent with that year's market.
+- **Take over a real person** (cheap, because the player is just a controller):
+  e.g. play as a real 1980 working actor. `[S optional]`
 
-### 4.5 Packaging and casting (requirement 2)
-1. **Director attaches** first (usually): director's utility for the project vs
-   studio's preference for the director.
-2. **Role requirements** generate a candidate pool: everyone whose age, gender,
-   persona and register match within tolerance, filtered by availability
-   (calendar overlap → excluded or marked "would need to drop X").
-3. **Shortlisting:** casting director scores candidates per decision-maker:
-   - Studio utility: `w_b·bankability_obs + w_c·(−cost_obs) + w_r·(−risk) + w_t·trend`
-   - Director utility: `w_f·fit + w_tal·perceived_talent + w_rel·affinity + w_v·vision_match`
-   - The power balance between studio and director depends on the director's
-     `auteur_power` and the budget (bigger budget → more studio control).
-4. **Path by status:** top-bankability actors get *direct offers*. Mid-tier get
-   *meetings / offers with conditions*. Others **audition**:
-   ```
-   audition_score = 0.45·talent + 0.25·craft + 0.20·range[reg] + 0.10·presence
-                    + prep_bonus(prep_days) + fit_bonus(persona) + N(0, σ_day)
-   ```
-   `σ_day` is meaningful (an off day is real), but talent dominates over many auditions.
-   Leads may require a **chemistry read / screen test** with the co-lead
-   (pairwise chemistry is a hidden value drawn once per pair, which makes it persistent).
-5. **Actor's decision** (players choose; NPCs evaluate the same utility):
-   ```
-   U_offer = g_money·log(fee/quote) + g_prestige·prestige_value(project)
-           + g_fame·exposure(project) + g_art·perceived_script_quality
-           + rel(director) − typecasting_risk − schedule_cost − energy_cost
-   ```
-   Perceived values come from the actor's/agent's observations, not truth.
-6. Rejections cascade: if the first choice passes, the shortlist moves on; if the
-   whole shortlist passes, the role's star requirement may be lowered or the
-   project stalls.
-
-### 4.6 Negotiation (requirement 8)
-Alternating-offer bargaining over a bundle (fee, backend, billing, perks):
-```
-studio_max   = value_of_actor − value_of_next_best_alternative     (BATNA, studio view)
-actor_min    = max(quote·(1 − flexibility(goals)), best_competing_offer_value)
-leverage     = f(bankability_obs, heat, # competing interested parties,
-                 agent.negotiation_skill, studio urgency (start date pressure))
-deal_fee     = actor_min + leverage_share · (studio_max − actor_min)    if studio_max ≥ actor_min
-```
-- Each round has a breakdown hazard that grows with hardball moves and lowers
-  affinity. Deals can die, and the role goes back to casting.
-- **Backend:** points are traded against fixed fee. Gross points only become
-  available above a bankability threshold (era-configurable). Net points are
-  offered freely because their expected payout is low (§5.6).
-- Contracts record **quote** updates. A fee becomes public through trade
-  observations with noise, which feeds future anchors.
-
-### 4.7 Calendar and scheduling (requirement 3)
-- Shoot length ~ `f(budget, genre, VFX share, director discipline)`, roughly
-  5–8 weeks for low budgets and 12–24 weeks for large ones, with a lognormal overrun.
-- Post length ~ 16–52+ weeks depending on VFX. Release date is chosen by the
-  studio among open slots (avoids competing tentpoles, chases seasons).
-- Actors hold multiple commitments: press tours (around release), reshoots
-  (unscheduled, can collide), holds and options. A **conflict resolver** applies
-  contract priorities (pay-or-play, holds), so a slip on one film can cost an
-  actor another role. That is emergent, not scripted.
-
-### 4.8 Production quality
-```
-perf(actor, role) = talent^0.5 · craft^0.3 · range[reg]^0.2   (geometric, 0–100)
-                    × fit(persona, role) × (1 + d·director.actor_direction)
-                    × chemistry_factor × energy_factor + N(0, σ_perf)
-film.true_quality vector:
-  craft        = h(director.technical, BTL budget per minute, crew tier)
-  entertainment= h(script.structure, genre delivery, pacing (editor), spectacle)
-  emotional    = h(script.dialogue, lead perfs, ensemble)
-  originality  = h(script.originality, director.vision, − interference)
-  spectacle    = h(VFX budget, director.technical, era tech level)
-```
-On-set events (illness, conflict, weather, studio interference, script rewrites on
-the fly) adjust components and the budget. Probabilities depend on the people
-involved (temperament, discipline, relationships).
-
-### 4.9 Reception
-- **Critics:** `critic_score = Σ w_c·quality_components + prestige_halo + N(0, σ)`,
-  weighted toward craft, originality and emotion. Each critic outlet is its own
-  lightweight agent `[P3]`, and the aggregate is shown RT/Metacritic-style by era.
-- **Audiences:** satisfaction per segment, weighted toward entertainment,
-  spectacle, genre delivery and star appeal. Exit scores (CinemaScore-like) are observed.
-- **Test screenings** (pre-release) give noisy satisfaction estimates and can
-  trigger reshoots or a changed release plan.
-
-### 4.10 Awards
-Season calendar: festivals → critics' groups → guilds → nominations → ceremony.
-Each voting body is a population of voters with preference weights (for example,
-Academy: drama, transformation, period and "career narrative" captured by real
-state such as prior nominations without wins). Inputs: performance quality,
-film prestige, campaign spend (distributor decision), release timing (memory decay),
-precursor wins (bandwagon). Nominees = top-k of simulated vote tallies with
-voter noise. Awards feed prestige, quote and offers.
-
-### 4.11 Career updates (requirements 4 & 9)
-After each project or event:
-- `craft += η · challenge(role) · director.actor_direction · (1 − craft/100)^γ`
-  (asymptotic, but not capped, and challenge matters: easy roles teach little).
-- `fame[region] ← 1 − (1 − fame)·(1 − reach_film[region] · screen_share · memorability)`;
-  fame decays slowly without new exposure.
-- `appeal[segment]` shifts with how satisfied that segment was **with them**
-  (performance × presence), so stars can grow or alienate specific audiences.
-- `bankability` = Bayesian update of the industry's draw estimate from openings,
-  using the industry's **attribution heuristic** (over-credits leads, under-credits
-  IP and marketing, a realistic bias that creates "overrated" stars).
-- `heat ← λ·heat + (1−λ)·Σ surprise`, where surprise = outcome − prior expectation
-  (box office, reviews, awards, viral moments).
-- `typecasting[tags] += τ · screen_share · success_weight`. Playing against type
-  lowers it slowly, and a hit against type lowers it fast (reinvention).
-- **Ageing:** the role supply by age and gender comes from the script generator's
-  historical demographics (configurable). Talent is stable, craft can still grow,
-  and `look_market_value` follows the era's curve. Older stars shift to character work,
-  prestige or directing naturally because that is where their utility moves.
-- **Transitions `[P5]`:** directing or producing ambitions emerge from goals plus
-  prestige and network; a first directing gig is a project like any other, with
-  the actor's director stats seeded from experience.
-
-### 4.12 NPC decision-making
-All NPCs (people and studios) are **utility-maximising agents with bounded
-rationality**: they evaluate options with the same functions as the player, using
-their own observations, with softmax choice noise (`temperature` per personality).
-NPC actors pursue goals (an ambitious money-seeker takes the sequel; an artist
-takes the indie). This gives the world its own stories: an NPC star can break
-out, burn out or reinvent themselves without the player.
-
-### 4.13 Player actions (CLI verbs, vertical slice)
-`status`, `calendar`, `offers`, `audition <role>`, `prep <days>`,
-`accept/decline/counter <offer>`, `take-class`, `network <person>`,
-`ask-agent <question>`, `switch-agent`, `pitch` `[P5]`, `spend <lifestyle>`,
-`invest`, `advance <period|until event>`, `news`, `trades`, `boxoffice`,
-`history <entity>`, `save/load`.
-
-### 4.14 Historical realism with divergence (requirement 6)
-Three layers:
-1. **Initial state (Jan 1980):** real studios, agencies, actors, directors and
-   projects in development, with estimated attributes (curated data, §6.4).
-2. **Structural history (default ON, toggleable):** technology and macro conditions
-   arrive on schedule, such as VHS growth, multiplex expansion, DVD (1997), the China
-   market opening, streaming (2007 onward, original films ~2015 onward), the 1988/2007/2023
-   strikes and the 2020 pandemic. These are environmental, not outcomes for specific films.
-3. **Contingent history = soft intents:** a historical film becomes a *project seed*
-   that appears around its real development date, with its real creative team as
-   **high-prior attachments**. Whether it gets made, who stars, how good it is and
-   how it does are all simulated. If the historical star is busy, the role is recast.
-   Real future actors enter via a **debut pipeline** around their real debut age,
-   with estimated talent profiles, but their careers are simulated from there.
-   Mergers and acquisitions are probabilistic pressures conditioned on studios' simulated
-   finances (a studio that's thriving in-sim is less likely to be sold).
-
-**Divergence persists:** once the sim deviates (Film X flops), downstream intents
-read the simulated state. Sequels to flops lose their seed probability, and an actor
-who already broke out gets the roles their heat earns, not their historical ones.
-A `divergence report` shows how far the world has drifted.
-
-### 4.15 Real-person content policy (config)
-Scandal, health and personal-life events are **disabled for real living people by
-default** (they apply to fictional NPCs). Professional outcomes such as box office,
-castings and awards are simulated for everyone.
+Generated back-history uses the **same estimator path** (synthetic credits, then
+evidence, then attributes), so a "star" start is internally consistent rather than
+having numbers assigned.
 
 ---
 
-## 5. Economic formulas
+## 5. Data models (condensed; full field lists in `docs/design-v0.2.md` §3)
 
-### 5.1 Demand model: audience compartments (prototype exists)
-For each film, region `r` and audience segment `s` (for example youth/adult × male/female,
-family; `[P3]` adds more), people move between states:
-```
-Unaware ──marketing, star fame, IP, WOM──▶ Aware ──appeal──▶ Interested ──▶ Watched
-                                             │                   │
-                                             └─ not interested    └─ lapse ("wait for video")
-```
-Weekly flows:
-```
-aware_from_marketing = 1 − exp(−k_mkt,era · effective_spend)    # diminishing returns
-baseline_aware       = 1 − (1−mkt)(1 − a_f·fame_lead)(1 − a_ip·IP_familiarity)
-appeal_s             = genre_appetite_s · premise_hook · star_appeal_s · trailer_quality
-                       · rating_access_s · critic_effect_s · exp(reception_shock)
-watch_rate_s,t       = base_rate · urgency_t · seasonality_t · screen_availability_t
-                       / competition_t                        # other films' interest
-lapse_t              = base_lapse · window_pressure_era       # shorter windows → more waiting
-WOM: new viewers × contacts × P(unaware) → aware, with appeal × (0.3 + 1.6·satisfaction_s)
-```
-- **Competition** is endogenous: films in release split a weekly moviegoing budget
-  per segment (`[P1]` scalar; `[P3]` full shared-pool model across all films).
-- **Screens:** the distributor books an opening count from tracking. Exhibitors
-  drop screens when per-screen gross falls below a threshold (era-dependent).
-- **Platform releases** start with few screens in big cities and expand if per-screen
-  averages are high, which is how sleepers and awards films emerge.
-- **Opening weekend** = week-1 gross × weekend share (era: about 0.6–0.7).
-
-### 5.2 International `[P1 simplified, P3 full]`
-Each region runs its own compartment model with regional fame, genre appetite,
-release delay, and distribution reach. Era tables move the international share from
-roughly 35–45% of worldwide gross for typical 1980s films to roughly 55–70% for 2010s
-blockbusters (verify).
-
-### 5.3 Distributor rentals
-```
-domestic_rentals = Σ_weeks gross_w · rental_share_w   (sliding scale, ~55% → 35%)
-intl_rentals     = Σ gross · intl_share_r             (~40%; China ~25% from 2012)
-```
-
-### 5.4 Ancillary windows (era-driven)
-```
-ancillary_stream_i = demand_index · coefficient_i,era · genre_multiplier_i + floor_i
-demand_index       = f(theatrical admissions, star fame, quality, IP)
-```
-Streams: home video (VHS rental pricing 1980s → sell-through → DVD boom about
-1999–2007 → decline), pay-TV, network/syndication, SVOD licensing (2008+),
-PVOD (2020+), library value over decades. Coefficients come from era tables. Each
-stream pays out over time (dated ledger entries), not as a lump sum.
-Direct-to-streaming films `[P5]` use a cost-plus buyout model instead of box office.
-
-### 5.5 Costs and the studio P&L
-```
-negative_cost = ATL (talent fees) + BTL (shoot weeks × crew/day rate × era index)
-                + VFX + contingency + overruns
-P&A           = studio decision (planned by tracking; typical wide release
-                ≈ 50–100% of negative cost; verify by era)
-studio_profit = rentals + ancillary − negative_cost − P&A − overhead (≈10–15%)
-                − interest − participations (gross/adjusted gross points)
-```
-
-### 5.6 Participations and "Hollywood accounting"
-Two ledgers per film:
-- **Economic P&L** (above): what the studio really made.
-- **Participation statement:** used to compute **net points**:
-  `net_receipts = rentals − distribution_fee (30–40% of rentals) − distribution
-   expenses − negative_cost − interest − overhead − gross participations`.
-  This rarely goes positive, matching reality, so a player who takes net points on a
-  modest hit gets nothing, while gross points on the same film pay well.
-- Cash-breakeven and box-office bonuses are triggers on the economic ledger.
-
-### 5.7 Salaries
-```
-base_scale(year, budget_tier)   — era table (SAG minimums → star fees)
-fee_target = base_scale · (bankability_obs/50)^β · heat_mult · prestige_mult
-             · scarcity(available alternatives) · agent_mult
-```
-`fee_target` enters negotiation (§4.6) as the actor side's anchor alongside the
-quote. Reference calibration: SAG scale (verify per year), the star-fee club
-thresholds by era (roughly $1M in the late 1970s, $10M+ for a few stars by about 1990,
-the $20M club by the late 1990s, and the 2010s shift toward backend and then
-streaming buyouts; verify).
-
-### 5.8 Personal finance
-```
-gross_income → agent 10% → manager 10–15% (optional) → lawyer ~5%
-             → business manager ~5% (optional) → publicist (retainer)
-             → union dues → taxes (era-specific effective rates, config)
-residuals (TV/video/streaming, SAG-style formulas, paid quarterly)
-expenses: lifestyle tier (choice; lifestyle creep raises fixed costs),
-          housing, staff, training
-investments: simple asset classes with era returns (index proxy), real estate `[P4]`
-```
-An actor can go broke, live on residuals, or build capital for a production company `[P5]`.
+- **Person:** id, tier, provenance, birth/death, roles, personality,
+  goals, energy/health, calendar, relationships, account, `controller: npc | player`.
+- **ActorProfile:** talent(T), craft(T), range vector(T), presence(T),
+  look_market_value(T, era/gender/age curve configurable), fame per region(T),
+  appeal per segment(T), loyalty per segment(T), bankability(O), critical_rep,
+  prestige, typecasting vector, heat(O), quote(O), professionalism(T).
+  T means hidden true value, O means an observed estimate.
+- **Director, Writer, Producer, Executive, Agent profiles:** as in v0.2.
+- **Studio, Agency:** as in v0.2, plus ownership history.
+- **Project:** stage machine IDEA → DEVELOPMENT → PACKAGING → GREENLIT → PREPRO →
+  SHOOTING → POST → AWAITING_RELEASE → RELEASED (or TURNAROUND, SHELVED, DEAD),
+  plus `historical_ref` and `divergence` flags.
+- **Role, Offer, Audition, Contract** (fee, backend type and points, bonuses, billing, holds).
+- **Film, BoxOfficeWeek, Revenue/Cost lines** posted to a double-entry Ledger.
+- **Observation** (subject, observer, value, σ, bias, source, date).
+- **HistoricalEvent** (§3.6), **WorldContextEvent**.
+- **Decision** `{id, owner, kind, options[], deadline, default_policy, context_refs}`.
+- **Proposal and Ruling** (§8.4).
+- **NarrativeNote** (non-mechanical continuity: names of minor fictional people,
+  places, running jokes), submitted by the narrator and stored verbatim.
 
 ---
 
-## 6. Calibration strategy
+## 6. Simulation processes
 
-### 6.1 What "realistic" means here
-We calibrate **distributions and relationships**, never individual films:
-- Annual distribution of domestic grosses (heavy-tailed; top-10 share)
-- Count of $100M+ (inflation-adjusted) releases per year by era
-- Opening-to-total multiplier distribution by era (1980s legs longer than 2010s)
-- Budget vs gross, profitability rate, and the share of wide releases losing money
-- International share by era and genre
-- Star salary distribution by year; how many actors are above $X
-- Career dynamics: second-role rate after debut, years to breakout, length of
-  leading-man/woman careers, rate of comebacks after slumps, Oscar-nomination age
-- Studio-level annual market share volatility
+### 6.1 Weekly tick order
+Market and context → historical events check → NPC goals → development → studio
+slate/greenlight → packaging and casting → negotiations → production → post →
+release scheduling → box office (all films, shared competition) → reception →
+ancillary → awards → finance → careers → relationships → information and news.
+The process descriptions in `docs/design-v0.2.md` §4.2–4.12 are retained (casting utilities,
+negotiation bargaining, production quality, career updates, NPC utility agents).
 
-### 6.2 Reference data (to collect in Phase 0)
-Box Office Mojo / The Numbers (yearly charts, weekly runs, budgets where known),
-MPA THEME reports (admissions, screens), National Association of Theatre Owners
-(average ticket prices), Academy Awards database, union rate tables, and published
-studio financials. Stored as CSV in `data/reference/` with source notes.
+### 6.2 Interruptible advancement and delegation (answers Q3) `[S]`
+`advance --until 1980-06-30` runs week by week and **stops early** when:
+- A **decision** the player owns is created with `interrupt: true` (offers,
+  counter-offers, audition invitations for significant roles, scheduling conflicts,
+  contract options, major personal choices).
+- A **narratively significant** event involving the player occurs, if enabled
+  (a film's opening, nominations, a major relationship event). This is configurable.
 
-### 6.3 Methods
-1. **Batch runs:** `tools/batch.py --seeds 200 --years 1980-1990` produces summary
-   statistics per run.
-2. **Loss function:** quantile errors and KS distance between simulated and
-   reference distributions, weighted per target.
-3. **Parameter search:** coordinate search first, then Bayesian optimisation
-   (Optuna) over config parameters, with held-out years (fit 1980–1995, validate
-   1996–2005) to avoid overfitting.
-4. **Historical coverage test:** seed real films with historical inputs (budget, cast,
-   release date, estimated quality) and simulate each 500 times. If calibrated, the
-   real gross should fall inside the simulated 10–90% band about 80% of the time. Too
-   often means the model is too wide; too rarely means it's overconfident.
-5. **Sensitivity analysis:** vary each parameter ±20% and rank outcome sensitivity.
-   High-sensitivity parameters get the most data attention.
-6. **Emergence checks:** count sleeper hits, flop-driven studio crises, breakouts
-   from nobodies, long dominant careers, and career collapses per simulated decade.
-   Each should occur at roughly historical frequencies, with none forced.
-
-### 6.4 Seed-data estimation for real people
-Attributes for real 1980 people are estimated from track records (box office,
-awards, critical reception, years working) via a documented rubric, then stored with
-an `estimation_confidence`. Unknowns get wide priors. Curating this dataset is the
-largest non-code effort; the vertical slice uses ~60 real people plus generated NPCs.
-
-### 6.5 Known gaps found by the prototype
-The box-office sketch (§6.7) produces plausible medians, but its upside tail is
-too thin (sleeper p90 domestic ≈ $29M with no true breakouts). Planned fixes:
-fat-tailed reception shocks (Student-t), WOM feeding the *appeal* of the unconvinced
-(cultural-moment effects), platform expansion, and second-week reviews-driven boosts.
-
-### 6.6 Tests
-- **Unit:** each formula with fixed inputs.
-- **Property:** money conservation, no negative stocks, no person in two overlapping
-  shoots, all stage transitions valid, all random draws logged.
-- **Determinism:** same seed + commands → identical state hash. Replay equals snapshot.
-- **Fairness:** run the same scenario with the player's actor replaced by an
-  identical NPC, then compare outcome distributions (they must match statistically).
-- **Regression:** golden-seed snapshots for key metrics; config changes show diffs.
-
-### 6.7 Prototype result (uncalibrated placeholder parameters, 1984)
-`python3 prototypes/box_office_sketch.py` → 2000 seeds each:
-
-| Film | Budget + P&A | Opening wknd p10/p50/p90 | Domestic p50 | Multiplier p50 | P(profit) |
-|---|---|---|---|---|---|
-| Sleeper comedy (quality 74, low fame) | $11M + $7M | $3.7 / $5.0 / $6.7M | $21M | 4.3× | 0.91 |
-| Hyped action (quality 44, big star) | $32M + $18M | $7.1 / $9.5 / $12.9M | $31M | 3.3× | 0.10 |
-
-The causal story emerges without being scripted: marketing and star fame buy the
-opening, quality buys the legs, and both outcomes stay uncertain. (The first
-parameter guess produced a $38M 1984 opening, above the real record of that
-era, which is exactly the kind of error calibration catches.)
+**Standing orders** (`orders.yaml`, per save) delegate routine matters, for example:
+```yaml
+auto_accept_auditions: {min_role: supporting, genres_excluded: [horror]}
+auto_decline_offers: {fee_below_quote_pct: 60}
+let_agent_negotiate: {up_to_role: supporting}     # agent uses its own skill
+finances: auto                                    # bills, commissions, taxes
+interrupt_on: [lead_offers, conflicts, counter_offers, nominations, premieres]
+```
+Delegated choices are made by the **same utility functions** that NPCs use, with the
+player character's stated goals. They are logged as `delegated(rule=…)` and listed
+in the next packet. Offers with a deadline freeze time until answered. If a decision
+is explicitly ignored, its documented default applies at the deadline.
 
 ---
 
-## 7. Implementation phases
+## 7. Box office: extraordinary outcomes without ceilings (answers Q6 / your Q3)
 
-Each phase ends with a playable build, passing tests, and an updated
-"implemented vs planned" table.
+### 7.1 What limits success (and what doesn't)
+**Hard limits are physical and economic only:** population by segment, seats ×
+shows × occupancy (capacity), screens available, ticket prices, run time before
+interest decays or windows open, and marketing money. **No outcome formula
+references historical records**, so a film can beat any record if the simulated
+audience behaviour gets it there.
 
-**Phase 0: Foundations (no gameplay)**
-Repo skeleton, models, RNG streams, clock and event queue, event log, ledger,
-config loader with hashing, SQLite save/load, replay tool, test harness.
-Start collecting reference data for 1980–1990.
-*Done when:* a world with dummy entities advances 520 weeks deterministically,
-and save → load → replay hashes match.
+### 7.2 Mechanisms that create a heavy upper tail `[S]`
+Economists De Vany & Walls found that box-office revenue has a Pareto-type upper
+tail (variance effectively infinite) and attributed it to **information cascades**:
+word of mouth and observing other people's choices. The model builds those causes directly:
 
-**Phase 1: Vertical slice (1980–1990, domestic + one international bucket)**
-- ~60 real people + ~400 generated actors, ~60 directors, 8 studios, 4 agencies
-- Development (simplified), studio greenlight with observed-value forecasts
-- Casting: direct offers, auditions, availability conflicts, rejections
-- Negotiation: fee + quote + simple gross/net points
-- Production and post with durations and overruns; film quality vector
-- Reception (critic score + segment satisfaction)
-- Compartment box office with competition scalar, screens, weekly charts
-- Simplified ancillary coefficients and studio P&L; participations
-- Career updates (craft, fame, appeal, bankability, heat, typecasting)
-- Personal finance with commissions and lifestyle expenses
-- Information layer v1 (trades, tracking, agent intel)
-- CLI with the verbs in §4.13; fact-packet export for narration
-- Calibration v1 on 1980s gross distributions and multipliers
-*Done when:* you can play a decade from unknown to (possibly) star while NPC
-careers evolve, and batch stats are within agreed tolerances.
+1. **Audience compartments** per segment and region: unaware → aware → interested →
+   watched, with lapse (`docs/design-v0.2.md` §5.1).
+2. **Social proof:** word-of-mouth reach grows with penetration ("everyone is
+   talking about it") and saturates.
+3. **Repeat viewing:** return probability rises steeply with satisfaction
+   (`∝ sat³` in the prototype) and decays per visit.
+4. **Capacity and holdover:** demand beyond weekly seats stays queued (sell-outs
+   lengthen runs). Exhibitors add screens when films sell out and drop them when
+   per-screen sales fall. Era parameters control screen totals and windows.
+5. **Breadth:** four-quadrant appeal reaches more segments; niche appeal saturates
+   its segment quickly.
+6. **Event status** `[S, to build]`: pre-release tracking feeds media coverage,
+   which feeds awareness (a cascade before opening). The prototype lacks this (§7.6).
+7. **Cultural-moment reception:** a fat-tailed (Student-t) reception shock drawn
+   identically for every film. It modulates satisfaction and appeal; it never sets
+   a gross directly. A phenomenon needs several of these mechanisms to align, and
+   the event log shows which did.
+8. **International echo** `[P3]`: regional markets with their own fame and genre appetites.
 
-**Phase 2: Living industry**
-NPC goals and decision depth, relationship graph effects on hiring, agencies and
-agents (switching, packaging), holds and options, development hell and turnaround,
-studio finances (distress, executive regime changes), news generation.
+### 7.3 Failure calibration
+Profitability depends on cost discipline, marketing efficiency, concept breadth,
+release-date competition and genre cycles, as well as quality. Targets: a
+substantial share of wide releases lose money, and well-made films often fail,
+but noticeably less often than poorly made ones.
 
-**Phase 3: Full economics and awards**
-Multi-region international markets, shared competition pool across films,
-platform releases, era-accurate ancillary waterfall, residuals, awards season with
-voting bodies and campaigns, critic outlets.
+### 7.4 Calibration targets (distributional, never per-film)
+- Yearly gross distribution by era: percentiles, top-10% share, **Hill tail index** of the top 5%
+- Ratio of the yearly #1 to the median film; spread of the yearly #1 across years
+- Opening-to-total multipliers overall and **for the top grossers specifically**
+- Profitability rate overall and by quality band; budget vs gross relationship
+- Frequency of new all-time admissions records over long simulated spans, as a
+  *soft* plausibility check (historically rare, not never). It is a diagnostic, not a cap.
+- Historical coverage test: simulate real films 500× from their real inputs. The
+  real result should fall inside the simulated 10–90% band about 80% of the time.
 
-**Phase 4: Historical expansion 1990–2026**
-Seed data for later decades (via intents and debut pipeline), structural events
-(DVD, China, streaming, strikes, pandemic), franchise/IP system, divergence report,
-calibration across all eras with held-out validation.
+No fixed "±25%" tolerance. Sign-off is a reviewed calibration report showing each
+target's simulated distribution next to the reference.
 
-**Phase 5: Career breadth**
-Television (series regular, guest, pilots), streaming originals and buyouts,
-theatre, endorsements, producing, directing, production companies.
+### 7.5 Methods
+Batch runs over hundreds of seeds; loss = weighted quantile/KS distances; parameter
+search (coordinate, then Bayesian) with held-out years; ±20% sensitivity analysis;
+emergence counts per simulated decade (sleepers, breakouts, collapses, comebacks).
 
-**Phase 6: Web app and narrator integration**
-FastAPI over the same engine, web front end (dashboards, calendar, trades page),
-LLM narrator with fact packets, command proposals and a number-consistency checker.
+### 7.6 Prototype evidence (uncalibrated; `prototypes/tail_sketch.py`)
+6,000 synthetic 1984-style wide releases (40 simulated years × 150):
+
+| Metric | Result |
+|---|---|
+| Domestic gross p10 / p50 / p90 / p99 | $6.6M / $15.9M / $39.3M / $85M |
+| Yearly #1 film: median / max | $103M / $252M (beats the real 1984 #1 with no special rule) |
+| Profitable overall | 41% |
+| Profitable, quality < 45 vs ≥ 70 | 35% vs 56% |
+| Top 5 runs | quality 64–83; mostly ordinary reception shocks, so they are driven by quality and word of mouth, not luck |
+| Hill tail index (top 5%) | 3.0 |
+
+**What calibration must fix (findings):**
+1. **The tail is too thin:** α ≈ 3.0, while the literature points to α < 2. The likely
+   missing pieces are the pre-release event cascade, cross-film attention competition
+   and IP/star-driven event openings.
+2. **Hits rely on implausibly long legs:** the top runs opened at $4–8M with
+   28–53× multipliers. Real 1980s megahits opened bigger and still had long legs,
+   so distributor widening and pre-release buzz need modelling.
+3. Quality's effect on profitability is plausible in direction, but its size needs
+   checking against reference data.
+
+The first sketch (`box_office_sketch.py`) also produced an impossible $38M 1984
+opening before tuning, which shows why the batch calibration tooling is part of the slice.
 
 ---
 
-## 8. Decisions needed before Phase 0 code
+## 8. Narrator integration with ChatGPT (answers your Q4) `[S]`
 
-1. **Player start:** new unknown actor in Jan 1980 (recommended for the slice), or choose any year/archetype?
-2. **Real people scope in slice:** ~60 real 1980 names plus generated NPCs, OK?
-3. **Tick:** weekly simulation with daily dates (recommended), OK?
-4. **Real-person events policy (§4.15):** keep the default (no scandals/health events for real living people)?
-5. **Data help:** will you help curate/review the seed-attribute estimates for real people, or should I draft them for your review?
-6. **Calibration tolerance:** how close is "close enough" for slice sign-off (e.g. simulated yearly-gross quantiles within ±25% of 1980s reference)?
+### 8.1 The loop
+```
+hsim load career1                       # canonical save
+hsim advance career1 --until 1980-06-30 # stops at decisions/interrupts
+hsim packet career1 > packet.md         # narrator packet (player-visible only)
+  → paste into ChatGPT (a ChatGPT Project holding the Narrator Guide)
+  → ChatGPT narrates, presents the pending choices, the player chooses in-story
+  → ChatGPT ends its reply with a fenced ```engine block
+hsim submit career1 reply.md            # parse → validate → adjudicate → apply → autosave
+  (repeat; the next packet includes the rulings)
+```
+You can also decide directly from the CLI (`hsim decide dec-0012 counter --fee 45000`)
+whenever that's easier.
+
+### 8.2 Narrator Guide (one-time document for the ChatGPT Project) `[S]`
+It states the contract:
+- **May invent:** dialogue, personalities consistent with packet traits, settings,
+  minor fictional characters, everyday events, press colour, emotional texture.
+- **Must not invent or contradict:** any number (money, grosses, scores, dates),
+  casting results, audition outcomes, awards, deals, deaths or other canon. It must
+  not reveal information marked `narrator_hidden`.
+- **Must propose, not assert:** consequential developments (falling-outs, alliances,
+  reputation moments, purchases, career intentions) go in the `engine` block.
+- How to present pending decisions, and how to write the reply block.
+
+### 8.3 Packet format (Markdown + YAML, target ≤ ~4k tokens; detail levels configurable)
+```yaml
+packet: pkt-000143          # unique; a reply must reference it
+save: career1  state_hash: 9f3a…  date: 1980-05-09  covers: 1980-04-11..1980-05-09
+canon:                      # confirmed; must not be contradicted
+  - {id: ev-2231, date: 1980-04-18, text: "You were cast as Danny in 'Night Shift Blues' (Orion), supporting role."}
+  - {id: ev-2240, date: 1980-05-02, text: "'Night Shift Blues' began principal photography in Toronto. Scheduled 7 weeks."}
+  - {id: ev-2251, date: 1980-05-09, text: "Opening weekend for 'Harbor Lights' (rival's film): $4.1M, rank 3."}
+rulings:                    # results of your last proposals
+  - {proposal: pr-0031, result: partially_accepted, effect: "Relationship with director cooled (moderate, not severe)."}
+delegated:
+  - {rule: auto_accept_auditions, text: "Agent booked an audition for a Paramount comedy on 1980-05-14."}
+status:
+  career: {fame: "known to casting directors, not the public", heat: rising, quote_public: "$40k (trade estimate)"}
+  money: {cash: 18450, monthly_costs: 2100}
+  projects: [{title: Night Shift Blues, stage: shooting, wraps: ~1980-06-20}]
+people:                     # who is on stage, with what the player knows
+  - {id: wd:Q…, name: …, role: director, traits: [meticulous, short-tempered], relation: "respects your work; annoyed by your lateness", notes: "…"}
+world:                      # public industry knowledge, labelled by confidence
+  - {text: "Trades report Universal is chasing a big summer comedy star.", confidence: reported}
+  - {text: "Rumour: a rival actor is up for the same lead as you.", confidence: rumour}
+pending_decisions:
+  - id: dec-0012
+    kind: offer
+    deadline: 1980-05-16
+    summary: "Orion offers a lead in a low-budget thriller, $45k, shoots 1980-07-07."
+    options: [accept, decline, counter(fee), ask_agent]
+    conflicts: "Overlaps by ~1 week if 'Night Shift Blues' runs over."
+    default_if_unanswered: decline
+continuity: |
+  Previously: … (engine-generated, salience-ranked, rolling compaction)
+narrator_notes: ["Your roommate is Gina (fictional, aspiring writer)."]
+```
+**What packets never contain:** hidden true values (talent, true quality, future
+dates of documented events not yet public, other people's private negotiations),
+except as the player's observations.
+
+### 8.4 Reply block and adjudication
+````
+```engine
+reply_to: pkt-000143
+decisions:
+  - {id: dec-0012, choice: counter, fee: 60000}
+proposals:
+  - {id: p1, type: relationship_shift, between: [player, wd:Q…], direction: negative,
+     severity: moderate, cause: "Shouting match over rewrites on day 12."}
+  - {id: p2, type: player_intent, text: "Wants to meet director X about her next film."}
+  - {id: p3, type: purchase, item: "used car", est_cost: 3000}
+notes:
+  - "Player started dating Gina's friend Marco (fictional)."
+advance: {until: 1980-06-30}
+```
+````
+Proposal types in the slice: `relationship_shift`, `reputation_moment`,
+`player_intent`, `purchase/expense`, `personal_milestone` (for the player or
+fictional NPCs), and `narrative_note`. More types come in `[P2]`.
+
+**Adjudication:** each type has preconditions (were they actually together? is it
+affordable? is the person real, and does the proposal touch protected categories?)
+and an engine model for the consequence. For example, whether an argument becomes
+a lasting falling-out depends on both temperaments, existing affinity and the
+stakes, and can resolve as *accepted*, *partially accepted* (a smaller effect),
+*rejected (with reason)* or *rolled* (a logged chance). Proposals that try to set
+numbers or outcomes (fees, casting, grosses, awards) are rejected and converted into
+intentions where possible ("wants a higher fee" becomes a counter-offer).
+NPC-to-NPC developments that the narrator invents follow the same rules.
+
+### 8.5 Continuity and safety
+- **Idempotent:** a reply must reference the latest packet id and state hash.
+  Re-submitting the same block is detected by its hash and ignored. A reply to an
+  old packet is refused unless you `rewind`, which creates a branch.
+- **Atomic and saved:** each submission is applied fully or not at all, then autosaved.
+- **Continuity summary:** generated deterministically from the event log
+  (salience = player involvement, size of change, recency, ongoing threads), so a
+  brand-new ChatGPT chat only needs the latest packet.
+- **Consistency check** `[P2]`: the parser flags numbers or named outcomes in
+  ChatGPT's narration that aren't in the packet, for example a narrated gross that
+  differs from canon.
+
+### 8.6 Integration options
+| Option | How | Verdict |
+|---|---|---|
+| **A. Copy/paste files** | Local CLI + ChatGPT Project with the Narrator Guide | **Slice default.** Works on any plan, and canon stays on your machine. |
+| B. ChatGPT runs the engine in its Python sandbox | Upload engine + save each session | Not recommended as canonical: sandbox files expire and ChatGPT can edit state. |
+| **C. MCP server** | Expose `service.py` as MCP tools (`get_packet`, `submit_reply`, `advance`) | `[P6]`, or earlier if you want. ChatGPT's developer mode supports custom MCP tools with write actions, but plan availability varies and the engine must be reachable over the internet. Uses the same service layer, so nothing is rewritten. |
+
+---
+
+## 9. Autonomous ecosystem
+Unchanged in intent from `docs/design-v0.2.md` §4.12: all people and studios are bounded-rational
+utility agents using their own observations. NPC careers, studio fortunes, genre
+cycles, relationships and personal lives (within §3.6 rules) evolve without the
+player. The packet's `world` section surfaces a salience-ranked selection of that activity.
+
+---
+
+## 10. Testing
+- **Unit and property:** money conservation, valid stage transitions, no overlapping
+  shoots, all draws logged.
+- **Determinism:** same inputs give the same state hash, and replay equals the snapshot.
+- **Fairness:** swap the player with an identical NPC; the outcome distributions must
+  match. Delegated decisions must equal NPC utility choices.
+- **Snapshot leakage:** observed attributes in a snapshot must be unchanged when
+  data after the start date is deleted.
+- **Narrator:** packets contain no hidden fields; the packet → reply → apply cycle
+  is idempotent; rewinding and replaying gives an identical state; malformed or
+  forbidden proposals are rejected with reasons.
+- **Batch calibration:** `tools/batch.py` runs thousands of films and careers per
+  configuration and produces the calibration report (§7.4) and career-dynamics
+  report (breakout rates, career lengths, slump-recovery rates, salary
+  distributions, NPC vs historical rank correlations for the first simulated years).
+
+---
+
+## 11. Phases
+
+### Vertical slice (Phases 0 + 1): "a playable, narratable 1980s career" `[S]`
+**Simulation integrity**
+- Core: RNG streams, clock and queue, event and command logs, ledger, SQLite saves,
+  replay, rewind/branch, config versioning, service layer.
+- Data: Wikidata pipeline (+ optional local IMDb enrichment) for about 1975–1990;
+  estimator with hindsight rule, overrides and anomaly report; snapshot compiler
+  (start dates 1980–1985); tiers A/B/C plus generated fill.
+- Protagonist creation: unknown, working actor or established star (+ optionally
+  take over a real person).
+- World loop: simplified development, studio greenlight on observed forecasts,
+  casting (offers, auditions, screen tests for leads, competition, conflicts,
+  rejections), negotiation (fee, quote, gross/net points), production durations
+  and overruns, film quality, critic and audience reception, box office (shared
+  competition, the §7.2 tail mechanisms, single international bucket), simple
+  ancillary and studio P&L, participations ("Hollywood accounting"),
+  career updates, personal finance, relationships v1, information layer v1.
+- Awards v0: Academy acting nominations and wins via a simple voter model.
+- Personal life v1: documented Wikidata events (marriages, divorces, children,
+  deaths) with dependency checks; light generated life events for fictional NPCs.
+- Interruptible advance, standing orders and delegation.
+
+**Narrative usability**
+- Packets (§8.3), reply parser and adjudicator (§8.4), slice proposal types,
+  continuity summary, narrative notes, idempotency, rewind.
+- Narrator Guide for a ChatGPT Project.
+- An end-to-end test script plus one real play session with ChatGPT as acceptance.
+
+**Calibration**
+- Batch tooling, 1980s reference statistics, calibration and career reports.
+
+### Later phases
+- **P2: deeper industry and lives.** Full awards season (precursors, campaigns),
+  agencies (switching, packaging), development hell and turnaround, studio finances
+  and ownership changes, Wikipedia-derived documented events and personality
+  extraction (with citations), critic outlets, more proposal types, the narration
+  consistency checker, and a 1990 snapshot as a second start-year proof.
+- **P3: full economics.** Multi-region international, full ancillary waterfall by
+  era, residuals detail, platform releases, franchises and IP.
+- **P4: history to 2026.** Data expansion, snapshots for 2004 and 2015 (and any year),
+  structural eras (multiplexes, DVD, China, streaming, the 1988/2007/2023 strikes,
+  the 2020 pandemic), and per-era calibration with held-out years.
+- **P5: career breadth.** TV, streaming originals and buyouts, theatre, endorsements,
+  producing, directing, production companies.
+- **P6: integrated apps.** MCP server for ChatGPT, web front end.
+
+### Implemented vs planned
+| Component | Status |
+|---|---|
+| Design (this document) | done (v0.3) |
+| `prototypes/box_office_sketch.py`, `prototypes/tail_sketch.py` | throwaway prototypes, uncalibrated |
+| Everything else | planned |
+
+---
+
+## 12. Open items
+1. Data hosts (Wikidata, optionally IMDb/TMDB) need network access in the build
+   environment, or the pipeline runs on your machine.
+2. Box-office reference statistics need a source we're allowed to use for full
+   yearly distributions. Aggregates and Wikipedia lists are fine; bulk scraping of
+   commercial sites is not.
+3. Configuration default for romantic relationships between real people that arise
+   from simulated contact (§3.6): proposed **on** (neutral category), but you may prefer **off**.
