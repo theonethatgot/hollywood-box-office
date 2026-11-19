@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hsim"
+version = "0.1.0"
+description = "Persistent Hollywood industry simulation engine with an LLM narrator interface"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "PyYAML>=6.0", "click>=8.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+hsim = "hsim.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["hsim*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

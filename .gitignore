@@ -1,5 +1,11 @@
 __pycache__/
 *.pyc
+*.egg-info/
 .venv/
-*.sqlite
+.pytest_cache/
+# local saves and play files
 saves/
+play/
+# IMDb-derived data must never be committed (non-commercial, no republication)
+data/local/
+data/raw/

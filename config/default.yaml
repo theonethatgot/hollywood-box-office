@@ -1,0 +1,186 @@
+# All tunable coefficients. Code holds structure; numbers live here.
+# Everything is UNCALIBRATED unless marked otherwise. See DESIGN.md §7 and
+# tools/batch.py for the calibration loop.
+
+world:
+  generated_actors: 1400          # fictional working/aspiring actors at start
+  generated_directors: 240
+  actor_gender_share_m: 0.56
+  new_actors_per_year: 110        # fictional debutants entering the pool
+  pipeline_months: 24             # initial projects spread over this horizon
+
+archetypes:                        # starting career positions for generated actors
+  # share, fame range, bankability range, credits range, quote ($, 1980 dollars)
+  newcomer: {share: 0.38, fame: [0.0, 0.005], bank: [2, 10], credits: [0, 1], quote: [0, 0]}
+  working:  {share: 0.45, fame: [0.003, 0.05], bank: [5, 25], credits: [2, 15], quote: [15000, 90000]}
+  notable:  {share: 0.13, fame: [0.05, 0.30], bank: [20, 55], credits: [8, 30], quote: [80000, 400000]}
+  star:     {share: 0.04, fame: [0.30, 0.80], bank: [55, 92], credits: [12, 40], quote: [400000, 3000000]}
+
+studios:                            # historical studios active in 1980 (names only; numbers are model inputs)
+  - {id: st-par, name: Paramount Pictures, tier: major, slate: 15, budget_median: 9.0, risk: 55}
+  - {id: st-uni, name: Universal Pictures, tier: major, slate: 16, budget_median: 9.0, risk: 50}
+  - {id: st-wb,  name: Warner Bros., tier: major, slate: 16, budget_median: 9.5, risk: 55}
+  - {id: st-col, name: Columbia Pictures, tier: major, slate: 14, budget_median: 8.5, risk: 50}
+  - {id: st-fox, name: 20th Century Fox, tier: major, slate: 13, budget_median: 9.0, risk: 50}
+  - {id: st-ua,  name: United Artists, tier: major, slate: 9, budget_median: 8.5, risk: 60}
+  - {id: st-mgm, name: Metro-Goldwyn-Mayer, tier: major, slate: 7, budget_median: 9.0, risk: 45}
+  - {id: st-bv,  name: Buena Vista (Disney), tier: major, slate: 6, budget_median: 8.0, risk: 35}
+  - {id: st-ori, name: Orion Pictures, tier: mini, slate: 9, budget_median: 7.5, risk: 60}
+  - {id: st-avc, name: AVCO Embassy Pictures, tier: mini, slate: 9, budget_median: 4.0, risk: 65}
+  - {id: st-nw,  name: New World Pictures, tier: mini, slate: 10, budget_median: 1.5, risk: 70}
+
+agencies:
+  - {id: ag-wma, name: William Morris Agency, tier: 1, hustle: 60, negotiation: 70, info: 70}
+  - {id: ag-icm, name: International Creative Management, tier: 1, hustle: 65, negotiation: 70, info: 70}
+  - {id: ag-caa, name: Creative Artists Agency, tier: 1, hustle: 80, negotiation: 75, info: 75}
+  - {id: ag-gk,  name: Gersh & Kline (fictional), tier: 2, hustle: 60, negotiation: 55, info: 55}
+  - {id: ag-sb,  name: Starling-Barr Talent (fictional), tier: 2, hustle: 55, negotiation: 50, info: 50}
+  - {id: ag-mc,  name: Marlowe Coastal Artists (fictional), tier: 3, hustle: 50, negotiation: 40, info: 40}
+
+genres:                             # base audience breadth and segment tilt (youth_m, youth_f, adult_m, adult_f)
+  drama:    {breadth: 0.074, tilt: [0.6, 0.8, 1.1, 1.5], atl_share: 0.20, shoot_weeks: [6, 11]}
+  comedy:   {breadth: 0.101, tilt: [1.3, 1.2, 0.8, 0.8], atl_share: 0.20, shoot_weeks: [6, 10]}
+  action:   {breadth: 0.095, tilt: [1.6, 0.6, 1.3, 0.5], atl_share: 0.18, shoot_weeks: [9, 16]}
+  romance:  {breadth: 0.074, tilt: [0.5, 1.6, 0.6, 1.4], atl_share: 0.22, shoot_weeks: [6, 10]}
+  thriller: {breadth: 0.081, tilt: [1.0, 0.8, 1.3, 1.0], atl_share: 0.18, shoot_weeks: [7, 12]}
+  horror:   {breadth: 0.081, tilt: [1.7, 1.4, 0.6, 0.4], atl_share: 0.10, shoot_weeks: [4, 8]}
+  family:   {breadth: 0.088, tilt: [1.2, 1.2, 0.8, 1.0], atl_share: 0.15, shoot_weeks: [8, 14]}
+  scifi:    {breadth: 0.088, tilt: [1.6, 0.8, 1.2, 0.6], atl_share: 0.14, shoot_weeks: [10, 18]}
+
+development:
+  quality_mean: 50
+  quality_sd: 14
+  greenlight_obs_noise: 12         # studio's error judging script/hook (scaled by exec taste)
+  greenlight_selectivity: 0.35     # share of weakest-looking pitches rejected
+  prepro_weeks: [6, 14]
+  post_weeks: [18, 34]
+  marketing_lead_weeks: 6
+  pa_ratio_median: 0.55            # P&A / negative cost
+  pa_ratio_sd: 0.30
+
+casting:
+  shortlist_size: 8
+  audition_size: 10
+  direct_offer_bankability: 55     # leads above this get direct offers
+  star_weight_by_role: {lead: 1.0, colead: 0.6, supporting: 0.15}
+  budget_star_pivot_m: 6.0         # budgets ($M, 1980 dollars) above this want stars for leads
+  talent_obs_noise: 10
+  shortlist_noise: 14             # casting directors' differing tastes per role
+  audition_day_sd: 8
+  max_delays_before_relaxing: 2
+  offer_response_days: 10
+  atl_role_share: {lead: 0.40, colead: 0.25, supporting: 0.08}   # share of ATL pool per role
+  accept_threshold: -0.35
+  idle_weeks_desperation: 26
+
+negotiation:
+  studio_max_mult: 1.45            # studio walk-away vs its planned fee
+  counter_split: 0.5               # where a studio counter lands between offers
+  walkaway_hazard: 0.25            # chance studio walks if counter > max
+  gross_points_bankability: 75
+  gross_points: [2, 10]
+  net_points: [1, 5]
+
+production:
+  overrun_weekly_sd: 0.012
+  conflict_base: 0.03
+  bond_gain: 2.0                   # weekly affinity gain from working together
+  craft_gain: 3.0
+  energy_cost_per_week: 3.0
+  energy_recovery_per_week: 2.5
+
+box_office:                         # starts from prototypes/tail_sketch.py
+  segments: {youth_m: 0.105, youth_f: 0.105, adult_m: 0.39, adult_f: 0.40}  # share of moviegoing pop
+  base_watch_rate: 0.30
+  opening_urgency: 1.25
+  interest_lapse: 0.07
+  wom_contacts: 2.0
+  social_proof_gain: 3.0
+  social_proof_half: 0.06
+  repeat_base: 0.35
+  repeat_decay: 0.5
+  seats_per_screen: 280
+  shows_per_week: 24
+  max_occupancy: 0.45
+  marketing_k: 0.045               # awareness per $M (1980 dollars)
+  fame_awareness: 0.55
+  competition_k: 1.5               # strength of attention competition between films
+  reception_t_df: 4
+  reception_scale: 0.16
+  opening_weekend_share: 0.62
+  screen_drop_threshold: 1100      # $/screen/week (1980 dollars)
+  screen_add_threshold: 6000
+  base_screens: 300
+  screens_per_budget_m: 45
+  max_weeks: 52
+  dom_rental: 0.45
+  intl_rental: 0.40
+  ancillary_coef: 0.32
+  ancillary_floor_m: 1.0
+  overhead_rate: 0.15
+  distribution_fee: 0.30           # for net-profit participation statements
+  seasonality:                      # multiplier by ISO week ranges
+    - {weeks: [1, 2], mult: 1.05}
+    - {weeks: [3, 20], mult: 0.90}
+    - {weeks: [21, 35], mult: 1.20}
+    - {weeks: [36, 46], mult: 0.88}
+    - {weeks: [47, 53], mult: 1.18}
+
+reception:
+  sat_mid: 53                      # film "enjoyment" at which audiences are 50% satisfied
+  sat_width: 4.0                   # smaller = audiences more sensitive to quality
+
+release_response:                   # studio adjusts P&A and screens after tracking/test screenings
+  expected_open_per_budget: 0.35   # opening the studio "needs" per $ of budget (1980 $)
+  pa_elasticity: 0.35
+  screening_weight: 1.0
+  max_boost: 0.8
+  max_cut: 0.5
+
+careers:
+  heat_decay_weekly: 0.985
+  bankability_lr: 0.35
+  critical_lr: 0.30
+  fame_decay_yearly: 0.10
+  memorability: {lead: 0.9, colead: 0.6, supporting: 0.25}
+  retire_idle_years: 4
+  look_age_peak: {m: 34, f: 28}    # market bias curve (configurable, era-specific later)
+  look_age_width: {m: 16, f: 12}
+
+finance:
+  agent_commission: 0.10
+  default_monthly_costs: {newcomer: 1200, working: 2500, notable: 6000, star: 25000}
+  fee_paid_at_start: 0.5
+  day_job_monthly: 900             # 1980 $: side income for unknowns without recent paid work
+  day_job_fame_max: 0.02
+  day_job_idle_weeks: 12
+
+agents:
+  sign_newcomer_yearly: 0.30       # base chance an unrepresented actor gets signed each year
+  open_call_slots: 2               # unrepresented/unknown actors seen per supporting-role audition
+
+awards:
+  nomination_week: 7               # ISO week of nominations announcement
+  ceremony_week: 14
+  slots: 5
+  noise_sd: 6
+  win_temperature: 6
+
+personal:
+  generated_for_real_people: [romance, breakup, engagement, marriage]   # never: illness, death, crime, scandal
+  spark_base: 0.06
+  attraction_threshold: 0.45
+  dating_to_marriage_weekly: 0.004
+  breakup_weekly_base: 0.012
+  divorce_weekly_base: 0.0012
+  documented_protection: 1.0       # 1 = documented marriages only end via documented events or divergence
+  fictional_mortality_gompertz: {a: 0.00002, b: 0.085}
+
+advance:
+  max_weeks_per_call: 520
+
+narrator:
+  max_canon_events: 45
+  max_world_items: 14
+  max_people: 14
+  continuity_events: 12
