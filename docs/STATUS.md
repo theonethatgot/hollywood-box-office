@@ -56,6 +56,30 @@ Example packets: `docs/examples/`.
 - Packets run ~5–8k tokens; compaction controls are planned.
 - Wikidata documents character names for only ~7% of roles.
 
+## Mobility and provenance pass
+- **Negative-spiral fix:** casting-director/director impressions were zero-sum against the room's median,
+  so frequent auditioners accumulated bad standing just by showing up, and nothing faded. Now an ordinary
+  read leaves no mark, a clearly weak read a small mark, a strong read real goodwill; bad impressions fade
+  (half-life ~11 months), good ones last (~5 years). Measured with `tools/mobility.py` (4 worlds, 9,528
+  represented actors, 1980–82): struggling actors' mean CD goodwill went from **−6 → −10 → −13** (share negative
+  74% → 81%) to **+1.3 → +3.0 → +4.5** (share negative ~50%, stable). Work mobility (bottom quartile reaching the
+  first-year median by year 3) stays ~44%.
+- **Ways to improve:** on-camera experience builds screen presence (small, diminishing, capped at +12 per career);
+  craft from work and classes; agents learn each client's niche (where they land near the top of the room) and
+  steer submissions there, and say so in check-ins.
+- **Schedule conflicts:** a slipped shoot that collides with work booked in the meantime now releases the actor
+  (role recast) instead of double-booking them (a latent bug exposed by the tests).
+- **Provenance labels** in packets: real film record vs simulated production; documented vs simulated character
+  names; documented vs simulated casting; event provenance for real people; documented vs simulated relationships.
+- **Statistics:** `tools/career_stats.py` reports call-in probabilities under the population rate, the actor's
+  own earlier rate, and a Beta-binomial posterior predictive, with the independence assumption stated.
+
+### Known gaps
+- Documented *unmarried* partnerships (Wikidata P451) aren't fetched yet, so real couples who never married
+  (e.g. Sondra Locke and Clint Eastwood) can be split up by simulated romances. Labelled "simulated", but should
+  be protected like marriages.
+- Real people's personality traits are still priors; only goals and reputation come from their documented careers.
+
 ## Calibration (4 historical worlds × 2 years, 1980–81, 1980 dollars)
 | Metric | Simulated | Reference / note |
 |---|---|---|

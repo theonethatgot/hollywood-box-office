@@ -67,6 +67,7 @@ class Person:
     persona: dict = field(default_factory=dict)      # background, hometown, signature, style
     employer: str | None = None                      # agency / studio id for agents, casting directors
     agent_person_id: str | None = None               # the named agent who represents this actor
+    track: dict = field(default_factory=dict)        # register -> [auditions, near the top]: what agents learn
 
 
 @dataclass

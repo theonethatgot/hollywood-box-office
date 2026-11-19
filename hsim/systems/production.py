@@ -41,6 +41,8 @@ def _try_start(st, cfg, p) -> None:
         if r.importance == "featured" and not r.cast_id:
             r.status = "filled locally"          # small parts not cast by start are filled by local hires
     roles = [r for r in roles if r.cast_id or r.importance != "featured"]
+    p.shoot_end = add_weeks(max(st.date, p.shoot_start), p.shoot_weeks)
+    _release_conflicts(st, cfg, p, roles)
     if p.director_id and all(r.cast_id for r in roles):
         p.stage = "shooting"
         p.shoot_end = add_weeks(st.date, p.shoot_weeks)
@@ -68,10 +70,32 @@ def _try_start(st, cfg, p) -> None:
         st.log("shelved", f"{st.studios[p.studio_id].name} shelved '{p.title}' after casting stalled.",
                refs={"project": p.id}, salience=1)
     else:
+        _release_conflicts(st, cfg, p, roles)
         for r in roles:
             if r.cast_id:
                 from .casting import commit
                 commit(st.people[r.cast_id], p)
+
+
+def _release_conflicts(st, cfg, p, roles) -> None:
+    """A slipped schedule can collide with work an actor booked in the meantime. The
+    actor keeps the other commitment and leaves this film; the role goes back to casting."""
+    from .casting import available
+    s0, s1 = p.shoot_start, add_weeks(p.shoot_end, 1)
+    for r in roles:
+        if not r.cast_id:
+            continue
+        person = st.people[r.cast_id]
+        if available(person, s0, s1, ignore_project=p.id):
+            continue
+        person.calendar = [c for c in person.calendar if c["project_id"] != p.id]
+        person.credits = [c for c in person.credits if c.get("project_id") != p.id]
+        st.log("schedule_conflict", f"{person.name} left '{p.title}' because the delayed shoot now clashes with "
+                                    f"another commitment; the role of {r.name} is being recast.",
+               actors=[person.id], refs={"project": p.id}, salience=3 if person.controller == "player" else 1,
+               public=person.fame > 0.1 or person.controller == "player")
+        r.tried.append(person.id)
+        r.cast_id, r.status, r.fee = None, ("filled locally" if r.importance == "featured" else "open"), 0.0
 
 
 def _shoot_week(st, cfg, p) -> None:
@@ -126,6 +150,8 @@ def wrap(st: WorldState, cfg: dict, p, quiet: bool = False) -> None:
         if not quiet:
             gain = cfg["production"]["craft_gain"] * (role.screen_share / 0.45) * (0.6 + dd.get("actor_direction", 50) / 100)
             a.craft = round(clamp(a.craft + gain * (1 - a.craft / 110)), 2)
+            from .jobbing import grow_presence
+            grow_presence(cfg, a, cfg["careers"]["presence_gain_film"] * (role.screen_share / 0.45 + 0.3))
             a.last_work = st.date
             finance.pay(st, cfg, a.id, role.fee * (1 - cfg["finance"]["fee_paid_at_start"]),
                         f"second half of fee for '{p.title}'")

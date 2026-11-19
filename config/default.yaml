@@ -157,6 +157,9 @@ release_response:                   # studio adjusts P&A and screens after track
 
 careers:
   heat_decay_weekly: 0.985
+  presence_gain_job: 0.4           # on-camera experience builds screen presence (diminishing)
+  presence_gain_film: 1.0
+  presence_gain_cap: 12            # lifetime cap on presence gained from experience
   bankability_lr: 0.35
   critical_lr: 0.30
   fame_decay_yearly: 0.10
@@ -197,6 +200,13 @@ social:
 
 agents:
   cd_known_picks: 4                # actors a casting director brings in without submissions
+  impressions:                     # what casting directors and directors remember from auditions
+    strong_margin: 3.0             # score above the room's median that earns goodwill
+    weak_margin: 6.0               # score below the median before a (small) negative mark
+    max_gain: 6.0
+    max_loss: 1.5
+    negative_monthly_keep: 0.94    # bad impressions fade (half-life ~11 months)
+    positive_monthly_keep: 0.988   # good impressions last (half-life ~5 years)
   submit_base: 0.9                 # agent submission propensity (scaled by hustle, fit, strategy)
   sign_newcomer_yearly: 0.30       # base chance an unrepresented actor gets signed each year
   open_call_slots: 2               # unrepresented/unknown actors seen per supporting-role audition

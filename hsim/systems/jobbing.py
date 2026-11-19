@@ -140,6 +140,16 @@ def _detail(st, cfg, p, kind, g, start, end, pools) -> dict | None:
     return None
 
 
+def grow_presence(cfg, p, amount: float) -> None:
+    """On-camera experience builds screen confidence: small, diminishing, capped per career."""
+    cap = cfg["careers"]["presence_gain_cap"]
+    done = p.provenance.get("presence_gained", 0.0)
+    gain = min(amount * (1 - p.presence / 100), cap - done)
+    if gain > 0:
+        p.presence = round(clamp(p.presence + gain), 2)
+        p.provenance["presence_gained"] = round(done + gain, 2)
+
+
 def describe(st, job) -> str:
     who = [st.people[c].name for c in job.get("colleagues", []) if c in st.people and c != job.get("director")][:4]
     bits = [job["name"]]
@@ -211,6 +221,8 @@ def settle(st: WorldState, cfg: dict) -> None:
             continue
         finance.pay(st, cfg, p.id, j["pay"], j["name"])
         p.craft = round(clamp(p.craft + j["craft"] * (1 - p.craft / 110)), 2)
+        if j["kind"] != "stage":
+            grow_presence(cfg, p, cfg["careers"]["presence_gain_job"])
         p.fame = round(min(0.95, p.fame + j["fame"]), 6)
         p.last_work = st.date
         p.calendar = [c for c in p.calendar if c["project_id"] != j["id"]]

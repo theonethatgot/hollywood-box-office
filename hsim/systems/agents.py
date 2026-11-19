@@ -88,7 +88,7 @@ def build_audition_list(st: WorldState, cfg: dict, proj: M.Project, role: M.Role
         f = fit(p, role, st.date)
         hustle = agent_hustle(st, p) / 100
         strat = strategy_fit(st, p, proj, role)
-        prob = ac["submit_base"] * (0.4 + hustle) * max(0.0, f - 0.35) * 2.2 * (0.5 + strat)
+        prob = ac["submit_base"] * (0.4 + hustle) * max(0.0, f - 0.35) * 2.2 * (0.5 + strat) * niche_factor(p, role.register)
         if R.unit(st.seed, "submit", role.id, p.id) < prob:
             submitted.append(p)
     # CD screening: same observed utility, plus what this CD remembers about the actor
@@ -157,14 +157,71 @@ def audition_impressions(st: WorldState, cfg: dict, proj: M.Project, role: M.Rol
     scores = sorted(s for _, s, _ in scored)
     median = scores[len(scores) // 2]
     watchers = [x for x in (casting_director_for(st, proj), proj.director_id) if x]
-    for _, sc, p in scored:
-        delta = clamp((sc - median) / 3, -4, 6)
+    n = len(scored)
+    for rank, (_, sc, p) in enumerate(sorted(scored, key=lambda x: -x[1])):
+        delta = impression(cfg, sc, median)
+        record_track(p, role.register, rank, n)
         for w in watchers:
             r = st.rel(w, p.id)
             r.affinity = round(clamp(r.affinity + delta, -100, 100), 2)
             r.contact_weeks += 0          # an audition is a meeting, not working together
             word = "a strong audition" if delta > 2 else "a solid audition" if delta > -1 else "an audition that didn't land"
             r.history.append({"date": st.date, "text": f"{word} for '{proj.title}'", "delta": round(delta, 1)})
+
+
+def impression(cfg, score: float, median: float) -> float:
+    """Asymmetric memory: an ordinary read leaves no mark, a clearly weak one a small
+    mark, a strong one real goodwill. (A zero-sum rule made frequent auditioners sink.)"""
+    im = cfg["agents"]["impressions"]
+    gap = score - median
+    if gap >= im["strong_margin"]:
+        return round(min(im["max_gain"], gap / 3), 2)
+    if gap <= -im["weak_margin"]:
+        return -round(min(im["max_loss"], (-gap - im["weak_margin"]) / 6 + 0.5), 2)
+    return 0.0
+
+
+def record_track(p: M.Person, register: str, rank: int, n: int) -> None:
+    """What an agent learns from results: where the client lands near the top of the room."""
+    t = p.track.setdefault(register, [0, 0])
+    t[0] += 1
+    if rank < max(1, n // 3):
+        t[1] += 1
+
+
+def niche_factor(p: M.Person, register: str) -> float:
+    """Agents steer submissions toward the kinds of parts where the client does well."""
+    n, good = p.track.get(register, (0, 0))
+    overall_n = sum(v[0] for v in p.track.values())
+    overall_good = sum(v[1] for v in p.track.values())
+    base = (overall_good + 1) / (overall_n + 3)
+    here = (good + base * 3) / (n + 3)            # shrink toward the client's overall rate
+    return clamp(0.6 + 1.2 * here, 0.6, 1.5)
+
+
+def best_niche(p: M.Person) -> str | None:
+    rated = [(r, (v[1] + 0.5) / (v[0] + 2)) for r, v in p.track.items() if v[0] >= 3]
+    if len(rated) < 2:
+        return None
+    best = max(rated, key=lambda x: x[1])
+    avg = sum(x[1] for x in rated) / len(rated)
+    return best[0] if best[1] > avg * 1.3 else None
+
+
+def memory_fades(st: WorldState, cfg: dict) -> None:
+    """Monthly: casting directors' and directors' impressions of actors fade toward neutral
+    (bad ones over months, good ones over years). Friendships and feuds are unaffected."""
+    if st.date[8:10] > "07":
+        return
+    im = cfg["agents"]["impressions"]
+    pros = {pid for pid, p in st.people.items() if "casting_director" in p.roles or "director" in p.roles}
+    for r in st.rels.values():
+        if r.status != "acquainted" or not ((r.a in pros) ^ (r.b in pros)):
+            continue
+        if r.affinity < 0:
+            r.affinity = round(r.affinity * im["negative_monthly_keep"], 2)
+        elif r.affinity > 0:
+            r.affinity = round(r.affinity * im["positive_monthly_keep"], 2)
 
 
 # ---------------------------------------------------------------- check-ins ---
@@ -194,6 +251,9 @@ def step(st: WorldState, cfg: dict) -> None:
         parts.append("there was little in your range this month to submit you for")
     if jobs:
         parts.append(f"{len(jobs)} smaller booking{'s' if len(jobs) != 1 else ''} came through")
+    niche = best_niche(pl)
+    if niche:
+        parts.append(f"they're steering you toward {niche} parts, where you've been landing near the top of the room")
     advice = _advice(st, cfg, pl)
     if advice:
         parts.append(advice)

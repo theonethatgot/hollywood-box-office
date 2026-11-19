@@ -28,6 +28,7 @@ def tick(st: WorldState, cfg: dict) -> None:
     social.step(st, cfg)
     personal.step(st, cfg)
     agents.step(st, cfg)
+    agents.memory_fades(st, cfg)
     careers.step(st, cfg)
     finance.step(st, cfg)
     st.date = add_days(st.date, 7)

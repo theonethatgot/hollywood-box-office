@@ -84,8 +84,9 @@ def _cast_part(st, cfg, show, k, by_gender) -> None:
     for p in pool:
         if p.id in known_ids or not p.agent_id:
             continue
+        from .agents import niche_factor
         prob = cfg["tv"]["submit_base"] * (0.4 + agent_hustle(st, p) / 100) * (tv_fit(p) - 0.3) * 2 * \
-            (0.5 + strategy_fit(st, p, None, None, kind="tv_guest"))
+            (0.5 + strategy_fit(st, p, None, None, kind="tv_guest")) * niche_factor(p, reg)
         if R.unit(st.seed, "tv-submit", show.id, st.date, k, p.id) < prob:
             submitted.append(p)
     submitted.sort(key=lambda p: (-known_u(p), p.id))
@@ -116,10 +117,12 @@ def _cast_part(st, cfg, show, k, by_gender) -> None:
         scored.append((sc, p))
     scored.sort(key=lambda x: (-x[0], x[1].id))
     median = scored[len(scored) // 2][0]
-    for sc, p in scored:                     # the room remembers
+    from .agents import impression, record_track
+    for rank, (sc, p) in enumerate(scored):  # the room remembers
+        record_track(p, reg, rank, len(scored))
         if cd_id:
             r = st.rel(cd_id, p.id)
-            r.affinity = round(clamp(r.affinity + clamp((sc - median) / 3, -3, 5), -100, 100), 2)
+            r.affinity = round(clamp(r.affinity + impression(cfg, sc, median), -100, 100), 2)
             if p.id == pl:
                 r.history.append({"date": st.date, "text": f"read for a guest part on {title}", "delta": 0})
     winner = scored[0][1]
