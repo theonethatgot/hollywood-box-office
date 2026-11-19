@@ -57,6 +57,7 @@ canon:
 - id: ev-1032
   date: '1980-04-25'
   text: Your agency got you into the premiere of 'Where the Buffalo Roam', where you met Bill Murray, Peter Boyle.
+  provenance: simulated event in this timeline
 - id: ev-1062
   date: '1980-05-02'
   text: 'Donna Merrick checked in; they submitted you for 7 roles this past month; 0 got you in the room; the most
@@ -65,6 +66,7 @@ canon:
 - id: ev-1223
   date: '1980-05-16'
   text: You caught up with Bill Murray at a Sunday barbecue in Studio City.
+  provenance: simulated event in this timeline
 period_summary:
   overview: 4 week(s), 9 submission(s) by your agent, 0 call-in(s), 0 audition(s), 0 booking(s); net money -$2k.
   quiet_period: true
@@ -195,12 +197,14 @@ people:
   ambition: wants bigger paydays and financial security
   bio: American actor and comedian; known for 'Mr. Mike's Mondo Video' (1979).
   recent_work:
-  - '''Loose Shoes'' (1980, colead)'
-  - '''Caddyshack'' (1980, featured)'
-  - '''A Mother''s Secret'' (1980, tv_movie)'
+  - '''Loose Shoes'' (1980, colead; this timeline)'
+  - '''Caddyshack'' (1980, featured; this timeline)'
+  - '''A Mother''s Secret'' (1980, tv_movie; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -219,12 +223,14 @@ people:
   ambition: wants bigger paydays and financial security
   bio: American actor (1935–2006); known for 'Hardcore' (1979).
   recent_work:
-  - '''a national commercial for a camera'' (1980, commercial)'
-  - '''In God We Tru$t'' (1980, colead)'
-  - '''Danger in Paradise'' (1980, tv_movie)'
+  - '''a national commercial for a camera'' (1980, commercial; this timeline)'
+  - '''In God We Tru$t'' (1980, colead; this timeline)'
+  - '''Danger in Paradise'' (1980, tv_movie; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -243,12 +249,14 @@ people:
   ambition: wants bigger paydays and financial security
   bio: American actor (1949–2006); known for 'Almost Summer' (1978).
   recent_work:
-  - '''Borderline'' (1980, supporting)'
-  - '''a national commercial for a family sedan'' (1980, commercial)'
-  - '''The Last Letter'' (1980, tv_movie)'
+  - '''Borderline'' (1980, supporting; this timeline)'
+  - '''a national commercial for a family sedan'' (1980, commercial; this timeline)'
+  - '''The Last Letter'' (1980, tv_movie; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -270,10 +278,10 @@ people:
     series: Bay City Precinct
     signature: never eats before a performance
   recent_work:
-  - '''Thunder Force'' (1971, supporting)'
-  - '''Windows'' (1980, featured)'
-  - '''Second Harbor at Coney Island'' (1980, featured)'
-  relationship_status: married (outside the industry)
+  - '''Thunder Force'' (1971, supporting; backstory)'
+  - '''Windows'' (1980, featured; this timeline)'
+  - '''Second Harbor at Coney Island'' (1980, featured; this timeline)'
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -294,12 +302,14 @@ people:
   ambition: wants a breakout role and a recognisable name
   bio: American actress; known for 'Shock Waves' (1977).
   recent_work:
-  - '''Tell Me a Riddle'' (1980, supporting)'
-  - '''Second Harbor at Coney Island'' (1980, lead)'
-  - '''A Town Called Hope'' (1980, tv_movie)'
+  - '''Tell Me a Riddle'' (1980, supporting; this timeline)'
+  - '''Second Harbor at Coney Island'' (1980, lead; this timeline)'
+  - '''A Town Called Hope'' (1980, tv_movie; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -319,7 +329,7 @@ people:
   persona:
     hometown: London
     style: notoriously hard to impress
-  relationship_status: married (outside the industry)
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -339,12 +349,14 @@ people:
   ambition: wants challenging material over safe paychecks
   bio: American actress; known for 'The Wanderers' (1979).
   recent_work:
-  - '''A Small Circle of Friends'' (1980, colead)'
-  - '''Raiders of the Lost Ark'' (1981, supporting)'
-  - '''The Jazz Singer'' (1980, film_bit)'
+  - '''A Small Circle of Friends'' (1980, colead; this timeline)'
+  - '''Raiders of the Lost Ark'' (1981, supporting; this timeline)'
+  - '''The Jazz Singer'' (1980, film_bit; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -369,9 +381,9 @@ people:
     series: Hart Case
     signature: chain-smokes between takes
   recent_work:
-  - '''Outer Voyager'' (1976, supporting)'
-  - '''Brave Island'' (1977, supporting)'
-  - '''Alien Signal'' (1978, supporting)'
+  - '''Outer Voyager'' (1976, supporting; backstory)'
+  - '''Brave Island'' (1977, supporting; backstory)'
+  - '''Alien Signal'' (1978, supporting; backstory)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -388,6 +400,7 @@ industry:
   news:
   - date: '1980-05-09'
     text: '''The Lost Signal'' finished its theatrical run with $2.7M domestic and an estimated $1.4M overseas.'
+    provenance: simulated event in this timeline
   - date: '1980-05-16'
     text: Charles Farrell will direct 'The Moonlit Affair' for Metro-Goldwyn-Mayer.
   - date: '1980-05-16'
@@ -402,22 +415,30 @@ industry:
     text: 'Walt Merrick will direct ''Omen III: The Final Conflict'' for 20th Century Fox.'
   - date: '1980-05-16'
     text: Ingrid Bergman was cast as Holly (featured) in 'Modern Problems' (20th Century Fox).
+    provenance: simulated casting in a real film (diverges from history)
   - date: '1980-05-16'
     text: Katharine Hepburn was cast as Meredith (featured) in 'Eye of the Needle' (United Artists).
+    provenance: simulated casting in a real film (diverges from history)
   - date: '1980-05-16'
     text: Jane Fonda was cast as Paula Gilmore (lead) in 'The Moonlit Affair' (Metro-Goldwyn-Mayer).
+    provenance: simulated casting in a fictional production
   - date: '1980-05-16'
     text: 'Reviews for ''Fame'': strong (critics'' aggregate 73/100); opening-night audiences gave it an A-.'
+    provenance: simulated event in this timeline
   - date: '1980-05-16'
     text: 'Reviews for ''Humanoids from the Deep'': mixed-to-positive (critics'' aggregate 59/100); opening-night
       audiences gave it a C+.'
+    provenance: simulated event in this timeline
   - date: '1980-05-16'
     text: 'Reviews for ''The Big Red One'': mixed-to-positive (critics'' aggregate 65/100); opening-night audiences
       gave it a B.'
+    provenance: simulated event in this timeline
   - date: '1980-05-16'
     text: Lillian Roth died.
+    provenance: documented history
   - date: '1980-05-16'
     text: Hugh Griffith died.
+    provenance: documented history
 pending_decisions: []
 continuity:
   career_so_far:

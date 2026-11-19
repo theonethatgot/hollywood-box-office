@@ -72,6 +72,7 @@ canon:
 - id: ev-2245
   date: '1980-07-04'
   text: Your agency got you into the premiere of 'Stunts Unlimited', where you met Christopher Mayer, Tony Anthony.
+  provenance: simulated event in this timeline
 - id: ev-2246
   date: '1980-07-04'
   text: 'Carlos Fielding checked in; they submitted you for 45 roles this past month; 1 got you in the room; the
@@ -267,9 +268,9 @@ people:
     hometown: Boston
     signature: never eats before a performance
   recent_work:
-  - '''Glass Contact'' (1979, supporting)'
-  - '''Iron Run'' (1979, supporting)'
-  - '''a national commercial for a camera'' (1980, commercial)'
+  - '''Glass Contact'' (1979, supporting; backstory)'
+  - '''Iron Run'' (1979, supporting; backstory)'
+  - '''a national commercial for a camera'' (1980, commercial; this timeline)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -291,9 +292,9 @@ people:
     hometown: Baltimore
     signature: carries a thermos of terrible coffee everywhere
   recent_work:
-  - '''Paradise Ridge'' (1980, guest)'
-  - '''Northside St. Vincent''s'' (1980, guest)'
-  - '''Nightmare on Route 9'' (1980, tv_movie)'
+  - '''Paradise Ridge'' (1980, guest; this timeline)'
+  - '''Northside St. Vincent''s'' (1980, guest; this timeline)'
+  - '''Nightmare on Route 9'' (1980, tv_movie; this timeline)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -318,8 +319,8 @@ people:
     hometown: London
     signature: chain-smokes between takes
   recent_work:
-  - '''The Fast Pursuit'' (1980, director)'
-  relationship_status: married (outside the industry)
+  - '''The Fast Pursuit'' (1980, director; this timeline)'
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -340,7 +341,7 @@ people:
   persona:
     hometown: San Francisco
     signature: reads tarot for the cast
-  relationship_status: married (outside the industry)
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -384,10 +385,12 @@ people:
   ambition: wants challenging material over safe paychecks
   bio: American film actor, producer, director, screenwriter.
   recent_work:
-  - '''Stunts Unlimited'' (1980, featured)'
+  - '''Stunts Unlimited'' (1980, featured; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -405,11 +408,13 @@ people:
   ambition: wants challenging material over safe paychecks
   bio: American actor (1954-2011).
   recent_work:
-  - '''Stunts Unlimited'' (1980, lead)'
-  - '''a national commercial for a department store'' (1980, commercial)'
+  - '''Stunts Unlimited'' (1980, lead; this timeline)'
+  - '''a national commercial for a department store'' (1980, commercial; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -429,12 +434,14 @@ people:
   ambition: wants challenging material over safe paychecks
   bio: Actor.
   recent_work:
-  - '''The Blue Lagoon'' (1980, colead)'
-  - '''Stunts Unlimited'' (1980, featured)'
-  - '''Deadly Inheritance'' (1980, tv_movie)'
+  - '''The Blue Lagoon'' (1980, colead; this timeline)'
+  - '''Stunts Unlimited'' (1980, featured; this timeline)'
+  - '''Deadly Inheritance'' (1980, tv_movie; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -451,12 +458,14 @@ people:
   ambition: wants challenging material over safe paychecks
   bio: Film director, television director (1925–2019); known for 'The Power Within' (1979).
   recent_work:
-  - '''Foster and Laurie'' (1975, director)'
-  - '''The Power Within'' (1979, director)'
-  - '''Killjoy'' (1981, director)'
+  - '''Foster and Laurie'' (1975, director; documented)'
+  - '''The Power Within'' (1979, director; documented)'
+  - '''Killjoy'' (1981, director; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
 - id: gen-a-00364
   name: Roger Nash
   age: 53
@@ -473,10 +482,10 @@ people:
     hometown: Minneapolis
     signature: quotes Brando at every opportunity
   recent_work:
-  - '''Bronco Billy'' (1980, lead)'
-  - '''The Pilot'' (1980, lead)'
-  - '''Testament'' (1980, lead)'
-  relationship_status: married (outside the industry)
+  - '''Bronco Billy'' (1980, lead; this timeline)'
+  - '''The Pilot'' (1980, lead; this timeline)'
+  - '''Testament'' (1980, lead; this timeline)'
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -492,23 +501,31 @@ industry:
   news:
   - date: '1980-06-20'
     text: Jack O'Halloran and Margot Kidder split up.
+    provenance: 'simulated (not historical): an alternate-timeline development'
   - date: '1980-07-04'
     text: John De Bello will direct 'Graduation Day' for Columbia Pictures.
+    provenance: documented production
   - date: '1980-07-04'
     text: Richard Burton was cast as Victor (supporting) in 'Long Country' (Warner Bros.).
+    provenance: simulated casting in a fictional production
   - date: '1980-07-04'
     text: Richard Burton was cast as Ellis (supporting) in 'Long Country' (Warner Bros.).
+    provenance: simulated casting in a fictional production
   - date: '1980-07-04'
     text: Karl Malden was cast as Glenn Chandler (featured) in 'Long Country' (Warner Bros.).
+    provenance: simulated casting in a fictional production
   - date: '1980-07-04'
     text: 'Reviews for ''The Idolmaker'': mixed (critics'' aggregate 52/100); opening-night audiences gave it an
       F.'
+    provenance: simulated event in this timeline
   - date: '1980-07-04'
     text: 'Reviews for ''Alien Terror'': savage (critics'' aggregate 9/100); opening-night audiences gave it an
       F.'
+    provenance: simulated event in this timeline
   - date: '1980-07-04'
     text: 'Reviews for ''The Sea Wolves'': mixed (critics'' aggregate 52/100); opening-night audiences gave it a
       C-.'
+    provenance: simulated event in this timeline
   - date: '1980-07-04'
     text: 'Trades: ''On the Nickel'' fell short of industry expectations on its opening.'
   - date: '1980-07-04'
@@ -517,10 +534,13 @@ industry:
     text: 'Trades: ''Schizoid'' fell short of industry expectations on its opening.'
   - date: '1980-07-04'
     text: '''Windows'' finished its theatrical run with $18.2M domestic and an estimated $17.0M overseas.'
+    provenance: simulated event in this timeline
   - date: '1980-07-04'
     text: '''The Watcher in the Woods'' finished its theatrical run with $2.8M domestic and an estimated $3.0M overseas.'
+    provenance: simulated event in this timeline
   - date: '1980-07-04'
     text: '''The Fog'' finished its theatrical run with $9.6M domestic and an estimated $11.9M overseas.'
+    provenance: simulated event in this timeline
 pending_decisions:
 - id: dec-00001
   kind: audition

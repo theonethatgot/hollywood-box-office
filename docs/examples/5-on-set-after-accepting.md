@@ -54,9 +54,11 @@ canon:
 - id: ev-6435
   date: '1981-04-10'
   text: Your agency got you into the premiere of 'Knightriders', where you met Tom Savini.
+  provenance: simulated event in this timeline
 - id: ev-6563
   date: '1981-04-24'
   text: 'Tension on the set of ''Second Harbor'': you clashed with Sondra Locke.'
+  provenance: simulated event in this timeline
 - id: ev-6575
   date: '1981-04-24'
   text: There is an unmistakable spark between you and Wendy Nakamura on the set of 'Second Harbor'.
@@ -97,23 +99,24 @@ your_work:
   your_role: 'Holly Moreno — colead: the second lead; a major arc opposite the protagonist'
   director: Jerome Hellman
   costars:
-  - Sondra Locke (Vanessa Winslow, lead)
-  - Wendy Nakamura (Gloria Hollis, supporting)
-  - Marcus Slater (Gary Burke, featured)
-  - Mildred Natwick (Joan Kowalski, featured)
-  - Marilyn Hassett (Lori Kendall, featured)
-  - Jack Weston (Hal, featured)
-  - Melina Mercouri (Teresa, featured)
-  - Louis Gossett Jr. (Bruce Okafor, featured)
-  - Daniel Massey (Jerry Fletcher, featured)
-  - James Broderick (Steven, featured)
-  - Jim Belushi (Frank Petrakis, featured)
-  - Sam Raimi (Glenn Farrell, featured)
-  - Dub Taylor (Richard Radford, featured)
+  - Sondra Locke as Vanessa Winslow (lead, character name simulated)
+  - Wendy Nakamura as Gloria Hollis (supporting, character name simulated)
+  - Marcus Slater as Gary Burke (featured, character name simulated)
+  - Mildred Natwick as Joan Kowalski (featured, character name simulated)
+  - Marilyn Hassett as Lori Kendall (featured, character name simulated)
+  - Jack Weston as Hal (featured, character name simulated)
+  - Melina Mercouri as Teresa (featured, character name simulated)
+  - Louis Gossett Jr. as Bruce Okafor (featured, character name simulated)
+  - Daniel Massey as Jerry Fletcher (featured, character name simulated)
+  - James Broderick as Steven (featured, character name simulated)
+  - Jim Belushi as Frank Petrakis (featured, character name simulated)
+  - Sam Raimi as Glenn Farrell (featured, character name simulated)
+  - Dub Taylor as Richard Radford (featured, character name simulated)
   stage: shooting
   location: Vancouver
   terms: $179k
   identity: gritty, New York-set drama; a mid-budget studio picture looking for a marketable lead
+  provenance: 'simulated production: not a real film; its cast and characters are part of this timeline'
   shoot: 1981-03-27 to 1981-05-15
 network:
 - name: Sondra Locke
@@ -253,12 +256,14 @@ people:
   ambition: wants bigger paydays and financial security
   bio: American actress (1944–2018); known for 'Death Game' (1977).
   recent_work:
-  - '''The Long Way Home'' (1980, tv_movie)'
-  - '''Outer Horizon'' (1981, lead)'
-  - '''Second Harbor'' (1981, lead)'
-  relationship_status: dating Barry Corbin
+  - '''The Long Way Home'' (1980, tv_movie; this timeline)'
+  - '''Outer Horizon'' (1981, lead; this timeline)'
+  - '''Second Harbor'' (1981, lead; this timeline)'
+  relationship_status: dating Barry Corbin (simulated, not historical)
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -280,9 +285,9 @@ people:
     hometown: Brooklyn
     signature: swears by a strict macrobiotic diet
   recent_work:
-  - '''Fort Apache, The Bronx'' (1980, film_bit)'
-  - '''Terror at Lake Wren'' (1981, tv_movie)'
-  - '''Second Harbor'' (1981, supporting)'
+  - '''Fort Apache, The Bronx'' (1980, film_bit; this timeline)'
+  - '''Terror at Lake Wren'' (1981, tv_movie; this timeline)'
+  - '''Second Harbor'' (1981, supporting; this timeline)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -303,10 +308,10 @@ people:
     hometown: Boston
     signature: always first to arrive and last to leave
   recent_work:
-  - '''Glass Contact'' (1981, featured)'
-  - '''Second Harbor'' (1981, featured)'
-  - '''Harbor of the Storm'' (1981, featured)'
-  relationship_status: married (outside the industry)
+  - '''Glass Contact'' (1981, featured; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  - '''Harbor of the Storm'' (1981, featured; this timeline)'
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -324,12 +329,14 @@ people:
   ambition: wants serious, respected work that gets noticed at awards time
   bio: American actress (1905–1994); known for 'At Long Last Love' (1975).
   recent_work:
-  - '''Lucky Vacation'' (1981, featured)'
-  - '''Second Harbor'' (1981, featured)'
-  - '''Lost Colony'' (1981, featured)'
+  - '''Lucky Vacation'' (1981, featured; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  - '''Lost Colony'' (1981, featured; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -346,12 +353,14 @@ people:
   ambition: wants challenging material over safe paychecks
   bio: American screen and television actress (born 1947); known for 'The Bell Jar' (1979).
   recent_work:
-  - '''Lennox''s Letters'' (1981, featured)'
-  - '''a national commercial for a fast-food chain'' (1980, commercial)'
-  - '''Second Harbor'' (1981, featured)'
+  - '''Lennox''s Letters'' (1981, featured; this timeline)'
+  - '''a national commercial for a fast-food chain'' (1980, commercial; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -369,12 +378,14 @@ people:
   ambition: wants a breakout role and a recognisable name
   bio: American actor (1924–1996); known for 'The Ritz' (1976).
   recent_work:
-  - '''a national commercial for a family sedan'' (1980, commercial)'
-  - '''Second Harbor'' (1981, featured)'
-  - '''Mommie Dearest'' (1981, film_bit)'
-  relationship_status: married (outside the industry)
+  - '''a national commercial for a family sedan'' (1980, commercial; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  - '''Mommie Dearest'' (1981, film_bit; this timeline)'
+  relationship_status: married (spouse outside the film industry) (documented)
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -393,12 +404,14 @@ people:
   bio: Greek actress, singer and politician. Minister of Culture of Greece (1920-1994); known for 'Nasty Habits'
     (1977).
   recent_work:
-  - '''Dugan''s Diner'' (1980, guest)'
-  - '''Second-Hand Hearts'' (1980, film_bit)'
-  - '''Second Harbor'' (1981, featured)'
-  relationship_status: married (outside the industry)
+  - '''Dugan''s Diner'' (1980, guest; this timeline)'
+  - '''Second-Hand Hearts'' (1980, film_bit; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  relationship_status: married (spouse outside the film industry) (documented)
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -417,12 +430,14 @@ people:
   ambition: wants challenging material over safe paychecks
   bio: American actor (1936–2024); known for 'The Deep' (1977).
   recent_work:
-  - '''Second Harbor'' (1981, featured)'
-  - '''a national commercial for an airline'' (1981, commercial)'
-  - '''Black Witness'' (1981, supporting)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  - '''a national commercial for an airline'' (1981, commercial; this timeline)'
+  - '''Black Witness'' (1981, supporting; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -439,12 +454,14 @@ people:
   ambition: wants serious, respected work that gets noticed at awards time
   bio: English actor and performer (1933-1998); known for 'The Incredible Sarah' (1976).
   recent_work:
-  - '''Hometown'' (1980, featured)'
-  - '''Escape to Victory'' (1981, featured)'
-  - '''Second Harbor'' (1981, featured)'
-  relationship_status: married (outside the industry)
+  - '''Hometown'' (1980, featured; this timeline)'
+  - '''Escape to Victory'' (1981, featured; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  relationship_status: married (spouse outside the film industry) (documented)
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -464,12 +481,14 @@ people:
   ambition: wants serious, respected work that gets noticed at awards time
   bio: American actor (1927-1982); known for 'The Phantom of the Open Hearth' (1976).
   recent_work:
-  - '''a national commercial for a fast-food chain'' (1981, commercial)'
-  - '''Second Harbor'' (1981, featured)'
-  - '''Candida'' (1981, stage)'
+  - '''a national commercial for a fast-food chain'' (1981, commercial; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  - '''Candida'' (1981, stage; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -486,12 +505,14 @@ people:
   ambition: wants serious, respected work that gets noticed at awards time
   bio: American actor.
   recent_work:
-  - '''Kiss Daddy Goodbye'' (1981, featured)'
-  - '''Second Harbor'' (1981, featured)'
-  - '''Summer of ''62'' (1981, tv_movie)'
+  - '''Kiss Daddy Goodbye'' (1981, featured; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  - '''Summer of ''62'' (1981, tv_movie; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -511,12 +532,14 @@ people:
   ambition: wants a breakout role and a recognisable name
   bio: American filmmaker (born 1959).
   recent_work:
-  - '''Hedda Gabler'' (1980, stage)'
-  - '''Second Harbor'' (1981, featured)'
-  - '''A Mother''s Secret'' (1981, tv_movie)'
+  - '''Hedda Gabler'' (1980, stage; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  - '''A Mother''s Secret'' (1981, tv_movie; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -535,12 +558,14 @@ people:
   ambition: wants bigger paydays and financial security
   bio: American actor (1907-1994); known for 'They Went That-A-Way & That-A-Way' (1978).
   recent_work:
-  - '''a national commercial for a breakfast cereal'' (1980, commercial)'
-  - '''The Dead Force'' (1981, featured)'
-  - '''Second Harbor'' (1981, featured)'
-  relationship_status: dating Judy Canova
+  - '''a national commercial for a breakfast cereal'' (1980, commercial; this timeline)'
+  - '''The Dead Force'' (1981, featured; this timeline)'
+  - '''Second Harbor'' (1981, featured; this timeline)'
+  relationship_status: dating Judy Canova (simulated, not historical)
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -555,6 +580,7 @@ industry:
   news:
   - date: '1981-04-10'
     text: Ron Howard and Jessica Lange split up.
+    provenance: 'simulated (not historical): an alternate-timeline development'
   - date: '1981-04-24'
     text: Desmond Halloran will direct 'Hardcase' for Warner Bros..
   - date: '1981-04-24'
@@ -562,27 +588,37 @@ industry:
       border in a city on the edge.
   - date: '1981-04-24'
     text: Jessica Lange turned down Elena Halloran in 'Palmer's Promise'.
+    provenance: simulated event in this timeline
   - date: '1981-04-24'
     text: Joseph Mascolo was cast as Mitchell Rossi (featured) in 'Outer Station' (20th Century Fox).
+    provenance: simulated casting in a fictional production
   - date: '1981-04-24'
     text: Susan Blakely was cast as Diana (lead) in 'Silent Season' (Orion Pictures).
+    provenance: simulated casting in a fictional production
   - date: '1981-04-24'
     text: Sally Field was cast as Vanessa Castillo (lead) in 'Hardcase' (Warner Bros.).
+    provenance: simulated casting in a fictional production
   - date: '1981-04-24'
     text: 'Reviews for ''Ms. 45'': mixed (critics'' aggregate 54/100); opening-night audiences gave it an F.'
+    provenance: simulated event in this timeline
   - date: '1981-04-24'
     text: 'Reviews for ''The Hand'': strong (critics'' aggregate 82/100); opening-night audiences gave it an A-.'
+    provenance: simulated event in this timeline
   - date: '1981-04-24'
     text: 'Reviews for ''Circle of Power'': poor (critics'' aggregate 44/100); opening-night audiences gave it a
       D.'
+    provenance: simulated event in this timeline
   - date: '1981-04-24'
     text: 'Trades: ''Ms. 45'' beat industry expectations on its opening.'
   - date: '1981-04-24'
     text: '''Hopscotch'' finished its theatrical run with $16.2M domestic and an estimated $9.4M overseas.'
+    provenance: simulated event in this timeline
   - date: '1981-04-24'
     text: '''The Howling'' finished its theatrical run with $419k domestic and an estimated $229k overseas.'
+    provenance: simulated event in this timeline
   - date: '1981-04-24'
     text: '''Touched by Love'' finished its theatrical run with $23.3M domestic and an estimated $17.4M overseas.'
+    provenance: simulated event in this timeline
 pending_decisions:
 - id: dec-00005
   kind: romance

@@ -101,7 +101,7 @@ def build(st: WorldState, cfg: dict, packet_id: str) -> dict:
         "covers": f"{new_events[0]['date'] if new_events else st.date} .. {st.date}",
         "state_hash": st.state_hash(),
         "protagonist": _protagonist(st, cfg) if pl else None,
-        "canon": [{"id": f"ev-{e['seq']}", "date": e["date"], "text": e["text"]} for e in canon],
+        "canon": [_event_item(st, e, with_id=True) for e in canon],
         "period_summary": _period_summary(st, cfg, new_events),
         "rulings": list(st.rulings),
         "delegated": [x["text"] for x in st.delegated],
@@ -112,7 +112,7 @@ def build(st: WorldState, cfg: dict, packet_id: str) -> dict:
         "people": _people(st, cfg, canon),
         "industry": {
             "box_office_chart": _chart(st),
-            "news": [{"date": e["date"], "text": e["text"]} for e in world_items],
+            "news": [_event_item(st, e) for e in world_items],
         },
         "pending_decisions": [_decision(d) for d in D.pending(st)],
         "continuity": _continuity(st, cfg),
@@ -168,14 +168,18 @@ def _projects(st, cfg) -> list:
             continue
         r = mine[0]
         d = st.people.get(p.director_id)
-        costars = [f"{st.people[st.roles[x].cast_id].name} ({st.roles[x].name}, {st.roles[x].importance})"
-                   for x in p.role_ids if st.roles[x].cast_id and st.roles[x].cast_id != pl]
+        costars = [f"{st.people[st.roles[x].cast_id].name} as {st.roles[x].name} ({st.roles[x].importance}"
+                   + (", character name documented" if st.roles[x].name_documented else ", character name simulated")
+                   + (", documented casting" if p.historical_ref and st.roles[x].intended == st.roles[x].cast_id else "")
+                   + ")" for x in p.role_ids if st.roles[x].cast_id and st.roles[x].cast_id != pl]
         item = {"title": p.title, "studio": st.studios[p.studio_id].name, "genre": p.genre, "premise": p.premise,
                 "your_role": f"{r.name} — {r.importance}: {r.description}",
                 "director": d.name if d else "TBD", "costars": costars, "stage": p.stage,
                 "location": p.location, "terms": money(r.fee) + (f" + {r.points:g} {r.points_type} points" if r.points_type else "")}
         if p.tone:
             item["identity"] = f"{p.tone} {p.genre}; {p.logline_extra}"
+        if not p.historical_ref:
+            item["provenance"] = "simulated production: not a real film; its cast and characters are part of this timeline"
         if p.historical_ref:
             item["historical_record"] = {
                 "real_film": True,
@@ -279,17 +283,71 @@ def _person_card(st, p) -> dict:
     if persona:
         card["persona"] = persona
     if recent:
-        card["recent_work"] = [f"'{c['title']}' ({c['year']}, {c['role']})" for c in recent]
-    card["relationship_status"] = ("married (outside the industry)" if p.partner_status == "married_offscreen"
-                                   else (f"{p.partner_status} {st.people[p.partner_id].name}" if p.partner_id in st.people
-                                         else "single"))
+        def tag(c):
+            if c.get("kind") == "prior":
+                return "documented" if p.historical else "backstory"
+            return "this timeline"
+        card["recent_work"] = [f"'{c['title']}' ({c['year']}, {c['role']}; {tag(c)})" for c in recent]
+    card["relationship_status"] = _relationship_status(st, p)
     if p.historical:
         card["real_person"] = True
-        card["note"] = "Real person: portray consistently with their documented career; personality is a simulation characterisation."
+        card["note"] = ("Real person. Their career up to the start date is documented; their ambition is inferred from it; "
+                        "personality traits are simulation characterisation, not biography. Everything they do with you, "
+                        "and anything marked 'simulated', is this alternate timeline, not history.")
     if r:
         card["with_you"] = {"standing": affinity_label(r.affinity), "status": r.status,
                             "history": [h["text"] + f" ({h['date']})" for h in r.history[-4:]]}
     return card
+
+
+SIMULATED_PERSONAL = {"romance", "marriage", "breakup", "divorce", "chemistry"}
+
+
+def _provenance(st, e) -> str | None:
+    """Label events about real people as documented history or simulated divergence."""
+    reals = [a for a in e["actors"] if a in st.people and st.people[a].historical]
+    t = e["type"]
+    if t.startswith("documented_"):
+        return "documented history"
+    if t == "history_diverged":
+        return "simulated divergence from history"
+    if not reals:
+        return None
+    if t in SIMULATED_PERSONAL:
+        return "simulated (not historical): an alternate-timeline development"
+    if t == "cast":
+        prj = st.projects.get(e["refs"].get("project"))
+        role = st.roles.get(e["refs"].get("role"))
+        if prj and prj.historical_ref and role and role.intended in e["actors"]:
+            return "documented casting (as in history)"
+        if prj and prj.historical_ref:
+            return "simulated casting in a real film (diverges from history)"
+        return "simulated casting in a fictional production"
+    if t in ("director_attached", "greenlight"):
+        prj = st.projects.get(e["refs"].get("project"))
+        return "documented production" if prj and prj.historical_ref else "fictional production"
+    return "simulated event in this timeline"
+
+
+def _event_item(st, e, with_id=False) -> dict:
+    item = ({"id": f"ev-{e['seq']}"} if with_id else {}) | {"date": e["date"], "text": e["text"]}
+    prov = _provenance(st, e)
+    if prov:
+        item["provenance"] = prov
+    return item
+
+
+def _relationship_status(st, p) -> str:
+    if p.partner_status == "married_offscreen":
+        return "married (spouse outside the film industry)" + (" (documented)" if p.historical and p.provenance.get("spouse_outside_world") else "")
+    if p.partner_id in st.people:
+        r = st.rel(p.id, p.partner_id, create=False)
+        documented = bool(r and any(h.get("documented") for h in r.history))
+        label = f"{p.partner_status} {st.people[p.partner_id].name}"
+        if p.historical or st.people[p.partner_id].historical:
+            label += " (documented)" if documented else " (simulated, not historical)"
+        return label
+    return "single"
 
 
 def _strategy(p) -> str:

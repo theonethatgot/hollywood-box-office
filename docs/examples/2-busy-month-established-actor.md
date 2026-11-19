@@ -115,6 +115,7 @@ canon:
 - id: ev-3486
   date: '1980-09-05'
   text: Your agency got you into the premiere of 'Atlantic City', where you met Susan Sarandon.
+  provenance: simulated event in this timeline
 - id: ev-3489
   date: '1980-09-05'
   text: 'Carlos Fielding checked in; they submitted you for 59 roles this past month; 10 got you in the room; the
@@ -383,7 +384,7 @@ people:
   persona:
     hometown: Philadelphia
     style: likes to see actors take risks in the room
-  relationship_status: married (outside the industry)
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -422,12 +423,14 @@ people:
   ambition: wants serious, respected work that gets noticed at awards time
   bio: American actress and activist; known for 'Something Short of Paradise' (1979).
   recent_work:
-  - '''Loving Couples'' (1980, supporting)'
-  - '''Atlantic City'' (1980, colead)'
-  - '''Raiders of the Lost Ark'' (1980, film_bit)'
+  - '''Loving Couples'' (1980, supporting; this timeline)'
+  - '''Atlantic City'' (1980, colead; this timeline)'
+  - '''Raiders of the Lost Ark'' (1980, film_bit; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -446,12 +449,14 @@ people:
   ambition: wants a breakout role and a recognisable name
   bio: American actor (1913–1994); known for 'Zulu Dawn' (1979).
   recent_work:
-  - '''Dugan''s Diner'' (1980, guest)'
-  - '''Cattle Annie and Little Britches'' (1981, lead)'
-  - '''a national commercial for a long-distance phone company'' (1980, commercial)'
+  - '''Dugan''s Diner'' (1980, guest; this timeline)'
+  - '''Cattle Annie and Little Britches'' (1981, lead; this timeline)'
+  - '''a national commercial for a long-distance phone company'' (1980, commercial; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -470,12 +475,14 @@ people:
   ambition: wants steady work and a sustainable life
   bio: French actor (1925–2020).
   recent_work:
-  - '''Vortex'' (1981, featured)'
-  - '''Vortex'' (1981, featured)'
-  - '''Fallen Star'' (1980, tv_movie)'
-  relationship_status: married (outside the industry)
+  - '''Vortex'' (1981, featured; this timeline)'
+  - '''Vortex'' (1981, featured; this timeline)'
+  - '''Fallen Star'' (1980, tv_movie; this timeline)'
+  relationship_status: married (spouse outside the film industry) (documented)
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -523,9 +530,9 @@ people:
     series: Central Precinct
     signature: collects vintage cars
   recent_work:
-  - '''Night Contact'' (1965, supporting)'
-  - '''Night Signal'' (1967, supporting)'
-  - '''a national commercial for an airline'' (1980, commercial)'
+  - '''Night Contact'' (1965, supporting; backstory)'
+  - '''Night Signal'' (1967, supporting; backstory)'
+  - '''a national commercial for an airline'' (1980, commercial; this timeline)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -548,10 +555,10 @@ people:
     series: Central Precinct
     signature: chain-smokes between takes
   recent_work:
-  - '''The Long Way Home'' (1980, tv_movie)'
-  - '''Arms and the Man'' (1980, stage)'
-  - '''Nightmare on Route 9'' (1980, tv_movie)'
-  relationship_status: married (outside the industry)
+  - '''The Long Way Home'' (1980, tv_movie; this timeline)'
+  - '''Arms and the Man'' (1980, stage; this timeline)'
+  - '''Nightmare on Route 9'' (1980, tv_movie; this timeline)'
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -574,10 +581,10 @@ people:
     series: Central Precinct
     signature: obsessive about getting the period details right
   recent_work:
-  - '''The Dogs of War'' (1980, film_bit)'
-  - '''The Cherry Orchard'' (1980, stage)'
-  - '''a national commercial for a department store'' (1980, commercial)'
-  relationship_status: married (outside the industry)
+  - '''The Dogs of War'' (1980, film_bit; this timeline)'
+  - '''The Cherry Orchard'' (1980, stage; this timeline)'
+  - '''a national commercial for a department store'' (1980, commercial; this timeline)'
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -600,9 +607,9 @@ people:
     series: Central Precinct
     signature: remembers every crew member's name
   recent_work:
-  - '''a national commercial for a shampoo'' (1980, commercial)'
-  - '''Valley Emergency'' (1980, guest)'
-  - '''City Emergency'' (1980, guest)'
+  - '''a national commercial for a shampoo'' (1980, commercial; this timeline)'
+  - '''Valley Emergency'' (1980, guest; this timeline)'
+  - '''City Emergency'' (1980, guest; this timeline)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -664,34 +671,47 @@ industry:
   news:
   - date: '1980-09-19'
     text: Malcolm McDowell and Margot Bennett divorced.
+    provenance: documented history
   - date: '1980-09-26'
     text: Warner Bros. greenlit 'The Quiet Inheritance', a drama picture. Two brothers fight to keep the family
       farm before time runs out.
   - date: '1980-09-26'
     text: (Divergence) Donald Pleasence is not available for 'Race for the Yankee Zephyr'; the role is being recast.
+    provenance: simulated divergence from history
   - date: '1980-09-26'
     text: Robert Young will direct 'Dream On!' for Independent distributors.
+    provenance: documented production
   - date: '1980-09-26'
     text: Rene Daalder will direct 'Home Sweet Home' for Independent distributors.
+    provenance: documented production
   - date: '1980-09-26'
     text: Gena Rowlands was cast as Maxine (featured) in 'Weekend Trouble' (Warner Bros.).
+    provenance: simulated casting in a fictional production
   - date: '1980-09-26'
     text: Christopher Reeve was cast as Gregory Sullivan (lead) in 'Reeves's Cellar' (20th Century Fox).
+    provenance: simulated casting in a fictional production
   - date: '1980-09-26'
     text: Susan Blakely was cast as Bianca Carver (lead) in 'The Quiet Inheritance' (Warner Bros.).
+    provenance: simulated casting in a fictional production
   - date: '1980-09-26'
     text: 'Reviews for ''Hopscotch'': strong (critics'' aggregate 82/100); opening-night audiences gave it an A.'
+    provenance: simulated event in this timeline
   - date: '1980-09-26'
     text: 'Reviews for ''Stardust Memories'': rapturous (critics'' aggregate 99/100); opening-night audiences gave
       it an A+.'
+    provenance: simulated event in this timeline
   - date: '1980-09-26'
     text: '''Cataclysm'' finished its theatrical run with $1.3M domestic and an estimated $671k overseas.'
+    provenance: simulated event in this timeline
   - date: '1980-09-26'
     text: '''Herbie Goes Bananas'' finished its theatrical run with $2.0M domestic and an estimated $1.5M overseas.'
+    provenance: simulated event in this timeline
   - date: '1980-09-26'
     text: '''Hardhat and Legs'' finished its theatrical run with $941k domestic and an estimated $612k overseas.'
+    provenance: simulated event in this timeline
   - date: '1980-09-26'
     text: Candice Bergen and Dack Rambo have started seeing each other.
+    provenance: 'simulated (not historical): an alternate-timeline development'
 pending_decisions: []
 continuity:
   career_so_far:

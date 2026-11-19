@@ -76,6 +76,7 @@ canon:
 - id: ev-5868
   date: '1981-02-06'
   text: 'Others seen for Holly Moreno: Kim Hale, Nadiuska, Lori Mercer.'
+  provenance: simulated event in this timeline
 - id: ev-5869
   date: '1981-02-06'
   text: 'Offer (after auditions): Holly Moreno, colead in ''Second Harbor'' — An estranged daughter tries to rebuild
@@ -275,7 +276,7 @@ people:
   persona:
     hometown: Philadelphia
     style: has a long memory for actors who impressed her once
-  relationship_status: married (outside the industry)
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -298,7 +299,7 @@ people:
   persona:
     hometown: Dallas
     style: likes to see actors take risks in the room
-  relationship_status: married (outside the industry)
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: friendly
     status: acquainted
@@ -324,9 +325,9 @@ people:
     series: Coast Force
     signature: carries a thermos of terrible coffee everywhere
   recent_work:
-  - '''a national commercial for a shampoo'' (1980, commercial)'
-  - '''The Pursuit of D. B. Cooper'' (1981, featured)'
-  - '''Brennan & Associates'' (1980, guest)'
+  - '''a national commercial for a shampoo'' (1980, commercial; this timeline)'
+  - '''The Pursuit of D. B. Cooper'' (1981, featured; this timeline)'
+  - '''Brennan & Associates'' (1980, guest; this timeline)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -353,9 +354,9 @@ people:
     series: Coast Force
     signature: reads tarot for the cast
   recent_work:
-  - '''Red Crossing'' (1975, colead)'
-  - '''a national commercial for a department store'' (1980, commercial)'
-  - '''Twelfth Night'' (1980, stage)'
+  - '''Red Crossing'' (1975, colead; backstory)'
+  - '''a national commercial for a department store'' (1980, commercial; this timeline)'
+  - '''Twelfth Night'' (1980, stage; this timeline)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -381,10 +382,10 @@ people:
     series: Coast Force
     signature: plays guitar in the trailer between setups
   recent_work:
-  - '''An Enemy of the People'' (1980, stage)'
-  - '''Fallen Star'' (1980, tv_movie)'
-  - '''a national commercial for a family sedan'' (1981, commercial)'
-  relationship_status: married (outside the industry)
+  - '''An Enemy of the People'' (1980, stage; this timeline)'
+  - '''Fallen Star'' (1980, tv_movie; this timeline)'
+  - '''a national commercial for a family sedan'' (1981, commercial; this timeline)'
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -410,9 +411,9 @@ people:
     series: Coast Force
     signature: reads tarot for the cast
   recent_work:
-  - '''a national commercial for a shampoo'' (1980, commercial)'
-  - '''a national commercial for a family sedan'' (1980, commercial)'
-  - '''a national commercial for a long-distance phone company'' (1980, commercial)'
+  - '''a national commercial for a shampoo'' (1980, commercial; this timeline)'
+  - '''a national commercial for a family sedan'' (1980, commercial; this timeline)'
+  - '''a national commercial for a long-distance phone company'' (1980, commercial; this timeline)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -436,10 +437,10 @@ people:
     series: Coast Force
     signature: collects vintage cars
   recent_work:
-  - '''A Mother''s Secret'' (1980, tv_movie)'
-  - '''a national commercial for a fast-food chain'' (1980, commercial)'
-  - '''Shadow Ranch'' (1981, guest)'
-  relationship_status: married (outside the industry)
+  - '''A Mother''s Secret'' (1980, tv_movie; this timeline)'
+  - '''a national commercial for a fast-food chain'' (1980, commercial; this timeline)'
+  - '''Shadow Ranch'' (1981, guest; this timeline)'
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -461,7 +462,7 @@ people:
   persona:
     hometown: New Orleans
     signature: plays guitar in the trailer between setups
-  relationship_status: married (outside the industry)
+  relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
     status: acquainted
@@ -482,9 +483,9 @@ people:
     hometown: Miami
     signature: runs lines with anyone who will listen
   recent_work:
-  - '''Fifth Family'' (1980, guest)'
-  - '''Prisoners'' (1980, film_bit)'
-  - '''Central Beat'' (1980, guest)'
+  - '''Fifth Family'' (1980, guest; this timeline)'
+  - '''Prisoners'' (1980, film_bit; this timeline)'
+  - '''Central Beat'' (1980, guest; this timeline)'
   relationship_status: single
   with_you:
     standing: cordial
@@ -508,10 +509,10 @@ people:
     hometown: Seattle
     signature: remembers every crew member's name
   recent_work:
-  - '''Golden Ridge'' (1980, guest)'
-  - '''Silver Point'' (1980, guest)'
-  - '''Eagle Landing'' (1981, guest)'
-  relationship_status: married (outside the industry)
+  - '''Golden Ridge'' (1980, guest; this timeline)'
+  - '''Silver Point'' (1980, guest; this timeline)'
+  - '''Eagle Landing'' (1981, guest; this timeline)'
+  relationship_status: married (spouse outside the film industry)
 - id: wd:Q1561436
   name: Nadiuska
   age: 29
@@ -525,12 +526,14 @@ people:
   ambition: wants a breakout role and a recognisable name
   bio: German actress; known for 'The People Who Own the Dark' (1976).
   recent_work:
-  - '''Desert Riders'' (1980, guest)'
-  - '''Big Shift'' (1981, featured)'
-  - '''Central Precinct'' (1980, guest)'
+  - '''Desert Riders'' (1980, guest; this timeline)'
+  - '''Big Shift'' (1981, featured; this timeline)'
+  - '''Central Precinct'' (1980, guest; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
 - id: wd:Q6182734
   name: Jerome Hellman
   age: 52
@@ -543,11 +546,13 @@ people:
   ambition: wants serious, respected work that gets noticed at awards time
   bio: American film producer (1928-2021); known for 'Promises in the Dark' (1979).
   recent_work:
-  - '''Promises in the Dark'' (1979, director)'
-  - '''Second Harbor'' (1981, director)'
+  - '''Promises in the Dark'' (1979, director; documented)'
+  - '''Second Harbor'' (1981, director; this timeline)'
   relationship_status: single
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -568,12 +573,14 @@ people:
   ambition: wants bigger paydays and financial security
   bio: American actress (1944–2018); known for 'Death Game' (1977).
   recent_work:
-  - '''The Long Way Home'' (1980, tv_movie)'
-  - '''Outer Horizon'' (1981, lead)'
-  - '''Second Harbor'' (1981, lead)'
-  relationship_status: dating Barry Corbin
+  - '''The Long Way Home'' (1980, tv_movie; this timeline)'
+  - '''Outer Horizon'' (1981, lead; this timeline)'
+  - '''Second Harbor'' (1981, lead; this timeline)'
+  relationship_status: dating Barry Corbin (simulated, not historical)
   real_person: true
-  note: 'Real person: portray consistently with their documented career; personality is a simulation characterisation.'
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
   with_you:
     standing: cordial
     status: acquainted
@@ -589,8 +596,10 @@ industry:
   news:
   - date: '1981-01-30'
     text: Bill Murray married Mickey Kelly.
+    provenance: documented history
   - date: '1981-02-06'
     text: Wayne Wang will direct 'Winter Season' for Orion Pictures.
+    provenance: fictional production
   - date: '1981-02-06'
     text: Orion Pictures greenlit 'Winter Season', a drama picture. A single mother tries to rebuild a life after
       prison as an old rivalry reopens.
@@ -601,24 +610,33 @@ industry:
       snowed-in lodge on the anniversary of the murders.
   - date: '1981-02-06'
     text: George Segal was cast as Toby Delaney (supporting) in 'Blind Exposure' (Columbia Pictures).
+    provenance: simulated casting in a fictional production
   - date: '1981-02-06'
     text: Shelley Winters was cast as Brenda Sheridan (featured) in 'Blind Exposure' (Columbia Pictures).
+    provenance: simulated casting in a fictional production
   - date: '1981-02-06'
     text: Shelley Winters was cast as Jill Dalton (featured) in 'Blind Exposure' (Columbia Pictures).
+    provenance: simulated casting in a fictional production
   - date: '1981-02-06'
     text: 'Reviews for ''Subway Riders'': strong (critics'' aggregate 75/100); opening-night audiences gave it a
       D.'
+    provenance: simulated event in this timeline
   - date: '1981-02-06'
     text: 'Reviews for ''Dead Target'': mixed (critics'' aggregate 50/100); opening-night audiences gave it a C.'
+    provenance: simulated event in this timeline
   - date: '1981-02-06'
     text: '''The Nude Bomb'' finished its theatrical run with $10.0M domestic and an estimated $4.2M overseas.'
+    provenance: simulated event in this timeline
   - date: '1981-02-06'
     text: '''He Knows You''re Alone'' finished its theatrical run with $3.6M domestic and an estimated $2.6M overseas.'
+    provenance: simulated event in this timeline
   - date: '1981-02-06'
     text: '''The Kidnapping of the President'' finished its theatrical run with $20.4M domestic and an estimated
       $19.8M overseas.'
+    provenance: simulated event in this timeline
   - date: '1981-02-06'
     text: Ron Howard and Jessica Lange have started seeing each other.
+    provenance: 'simulated (not historical): an alternate-timeline development'
 pending_decisions:
 - id: dec-00003
   kind: offer
