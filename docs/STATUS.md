@@ -8,7 +8,7 @@ covered by tests or the batch and validation reports, and usable from the CLI.
 |---|---|
 | Core | Named deterministic RNG streams, weekly tick, event log with hash chain, YAML config with hashing, flat serialisable state |
 | Persistence | SQLite saves: genesis params, command log, events, snapshots per packet; `verify` replays to an identical state hash; `rewind` branches at any packet |
-| **Historical snapshot** | Wikidata (CC0) pack of 2,775 US films (1975–84) and 6,814 people; loader builds the world for a start date (1980–1984 supported); real studios mapped from distributors; real films become projects with stages inferred from release dates (schedules fitted so documented films don't collide); real casts as *intended* attachments with agent holds; observed attributes from pre-start facts only; hidden talent from partial hindsight plus noise; personality and orientation priors marked as such in provenance |
+| **Historical snapshot** | Wikidata (CC0) pack of 4,996 US films (1975–89) and 10,517 people; loader builds the world for a start date (1980–1987 supported); ingestion v2 (bulk SPARQL + persistent store, see docs/INGESTION.md); real studios mapped from distributors; real films become projects with stages inferred from release dates (schedules fitted so documented films don't collide); real casts as *intended* attachments with agent holds; observed attributes from pre-start facts only; hidden talent from partial hindsight plus noise; personality and orientation priors marked as such in provenance |
 | **Documented history** | Marriages, divorces and deaths as events with dependencies (independent / relationship / circumstance / production); widowhood is not read as divorce; divergences logged |
 | Fictional population | ~700 generated actors and 80 directors alongside real people (1,400/240 in fictional-only worlds); yearly debutants |
 | Studios | Weekly greenlights at slate rates, reduced by documented films in the pipeline; pitch selection on the studio's noisy read of quality |
@@ -57,10 +57,10 @@ Six of ten anchors are in the top 50 of 3,595 real actors.
 5. Agents as people, deeper NPC goals, awards season detail, then Phases 3–6 (DESIGN.md §11).
 
 ## Data and licensing
-- Committed: `data/history/wikidata_1975_1984.json` (CC0 facts only), `data/reference/` anchors.
+- Committed: `data/history/wikidata_1975_1989.json` (CC0 facts only), `data/reference/` anchors.
 - Local only (gitignored): `data/raw/` downloads, `data/local/imdb_billing.json` (IMDb billing order;
   personal non-commercial use, never committed). Without the local billing file, cast order falls back
-  to Wikidata statement order, or to a prior-experience rule for films fetched in bulk.
+  to Wikidata statement order (now fetched for every film in the pack).
 
 ## Known simplifications
 - One international bucket; TV and theatre exist only as jobbing work.

@@ -14,7 +14,7 @@ hsim new career1 --historical --name "Nora Vance" --gender f --birth 1956-09-14 
   directors, and real films in production and release. Their real casts are
   likely, not guaranteed. Without it, the world is entirely fictional, apart
   from the studio names.
-- `--start 1982-06-04` starts at a later date. The current data pack supports 1980–1984.
+- `--start 1986-06-06` starts at a later date. The current data pack supports 1980–1987.
 - Optional, better billing order: build `data/local/imdb_billing.json` with
   `python datapipe/imdb_billing.py`. It is for personal use only and is never committed.
 - `--background`: `unknown`, `working` or `star`. This sets your starting position:

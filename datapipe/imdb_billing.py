@@ -17,38 +17,26 @@ import argparse
 import gzip
 import json
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fetch_wikidata import RAW, UA, chunked, q  # noqa: E402
+from fetch_wikidata import UA, Client, Ingest, q  # noqa: E402
+from store import Store  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 IMDB_RAW = ROOT / "data" / "raw" / "imdb"
 LOCAL = ROOT / "data" / "local"
 PRINCIPALS = "https://datasets.imdbws.com/title.principals.tsv.gz"
 
-IDS = """SELECT ?x ?imdb WHERE {{
-  VALUES ?x {{ {values} }}
-  ?x wdt:P345 ?imdb.
-}}"""
-
-
-def film_and_people_ids():
-    films = [p.stem for p in (RAW / "films").glob("*.json")]
-    people = set()
-    for f in films:
-        ent = json.loads((RAW / "films" / f"{f}.json").read_text())
-        for c in ent.get("claims", {}).get("P161", [])[:40]:
-            v = c.get("mainsnak", {}).get("datavalue", {}).get("value")
-            if isinstance(v, dict) and "id" in v:
-                people.add(v["id"])
-    return sorted(films), sorted(people)
-
-
-def stage_ids():
-    films, people = film_and_people_ids()
-    chunked(IDS, films + people, "imdbids", 2000)
+def stage_ids(y0: int, y1: int):
+    """Wikidata -> IMDb id mapping (CC0) for the range's films and their cast."""
+    store = Store()
+    ing = Ingest(store, Client())
+    films = sorted(ing.film_list(y0, y1))
+    people, _ = ing.people_of(films)
+    ing.bulk("imdbids", films + people)
 
 
 def stage_download():
@@ -69,12 +57,10 @@ def stage_download():
 
 
 def stage_build():
-    to_q, q_imdb = {}, {}
-    for path in RAW.glob("q_imdbids_*.json"):
-        for r in json.loads(path.read_text()):
-            to_q[r["imdb"]] = q(r["x"])
+    to_q = {r["imdb"]: q(r["x"]) for r in Store().rows("imdbids")}
     film_t = {t: qq for t, qq in to_q.items() if t.startswith("tt")}
     order = {}
+    t0 = time.time()
     with gzip.open(IMDB_RAW / "title.principals.tsv.gz", "rt", encoding="utf-8") as fh:
         next(fh)
         for line in fh:
@@ -88,15 +74,18 @@ def stage_build():
             billing[fq] = qs
     LOCAL.mkdir(parents=True, exist_ok=True)
     (LOCAL / "imdb_billing.json").write_text(json.dumps(billing))
-    print(f"billing order for {len(billing)} films -> data/local/imdb_billing.json (local only, never commit)")
+    print(f"billing order for {len(billing)} films in {time.time() - t0:.0f}s -> data/local/imdb_billing.json "
+          f"(local only, never commit)")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage", choices=["ids", "download", "build", "all"], default="all")
+    ap.add_argument("--from-year", type=int, default=1975)
+    ap.add_argument("--to-year", type=int, default=1989)
     a = ap.parse_args()
     if a.stage in ("ids", "all"):
-        stage_ids()
+        stage_ids(a.from_year, a.to_year)
     if a.stage in ("download", "all"):
         stage_download()
     if a.stage in ("build", "all"):

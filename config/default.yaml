@@ -186,7 +186,7 @@ personal:
   fictional_mortality_gompertz: {a: 0.00002, b: 0.085}
 
 history:                            # historical snapshot loader (hsim/world/historical.py)
-  default_pack: data/history/wikidata_1975_1984.json
+  default_pack: data/history/wikidata_1975_1989.json
   lookback_years: 5               # credits in this window put a person in the world
   horizon_months: 24              # real films released within this window become pipeline projects
   in_release_weeks: 9             # real films released this recently are in theatres at start

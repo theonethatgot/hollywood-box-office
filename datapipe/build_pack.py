@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -81,8 +82,6 @@ def _precision(ent, prop) -> str:
     if not best:
         return "year"
     t, prec, raw = best
-    if prec >= 11 and raw[6:11] == "01-01" and ent.get("cast_order") == "unordered":   # no precision info
-        return "year"          # bulk SPARQL dates lose precision; Jan 1 almost always means "year only"
     return "day" if prec >= 11 else "month" if prec == 10 else "year"
 
 
@@ -95,25 +94,60 @@ def _usd(ent, prop):
     return best
 
 
+def _film_entities(store, y0: int, y1: int, rows) -> list:
+    """Entity-shaped film records from the store: per-film entity data where fetched
+    (statement order kept), otherwise assembled from bulk SPARQL rows."""
+    listed = store.films(y0 - 1, y1 + 1)
+    items, meta, dates = {}, {}, {}
+    for r in rows("filmitems"):
+        items.setdefault(qid(r["f"]), {}).setdefault(r["prop"].rsplit("/", 1)[1], []).append(qid(r["v"]))
+    for r in rows("filmmeta"):
+        meta[qid(r["f"])] = r
+    for r in rows("filmdates"):
+        t = r["t"] if r["t"].startswith(("+", "-")) else "+" + r["t"]
+        dates.setdefault(qid(r["f"]), []).append({"mainsnak": {"datavalue": {"value": {"time": t, "precision": int(r["prec"])}}}})
+    out, have = [], set()
+    for f, ent, src in store.entities("film"):
+        if f not in listed:
+            continue
+        if src != "entitydata":
+            ent["cast_order"] = "unordered"
+            if f in dates:
+                ent["claims"]["P577"] = dates[f]
+        out.append(ent)
+        have.add(f)
+    for f in sorted(set(listed) - have):
+        if f not in meta or f not in dates:
+            continue
+        m = meta[f]
+        claims = {k: [{"mainsnak": {"datavalue": {"value": {"id": v}}}} for v in sorted(set(vs))]
+                  for k, vs in items.get(f, {}).items()}
+        claims["P577"] = dates[f]
+        for key, prop in (("costUsd", "P2130"), ("boUsd", "P2142")):
+            if m.get(key):
+                claims[prop] = [{"mainsnak": {"datavalue": {"value": {"amount": m[key], "unit": USD}}}}]
+        out.append({"id": f, "labels": {"en": {"value": m.get("label", "")}},
+                    "descriptions": {"en": {"value": m.get("desc", "")}},
+                    "sitelinks": {f"s{i}": 1 for i in range(int(float(m.get("sl", 0))))},
+                    "claims": claims, "cast_order": "unordered"})
+    return out
+
+
 def build(y0: int, y1: int) -> dict:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from store import Store
+    store = Store()
+
     def rows(name):
-        out = []
-        for path in sorted(RAW.glob(f"q_{name}_*.json")):
-            out += json.loads(path.read_text())
-        return out
+        return store.rows(name)
 
     labels = {qid(r["x"]): r["label"] for r in rows("labels")}
     excluded = {qid(r["f"]) for r in rows("exclude")}
-    dates = {}
-    for r in rows("filmdates"):
-        dates.setdefault(qid(r["f"]), []).append({"mainsnak": {"datavalue": {"value": {
-            "time": ("+" + r["t"]) if not r["t"].startswith(("+", "-")) else r["t"], "precision": int(r["prec"])}}}})
     films = {}
-    for f in sorted((RAW / "films").glob("*.json")):
-        ent = json.loads(f.read_text())
-        if ent.get("cast_order") == "unordered" and ent["id"] in dates:
-            ent["claims"]["P577"] = dates[ent["id"]]
-            ent["cast_order"] = "unordered-dated"
+    unordered = set()
+    for ent in _film_entities(store, y0, y1, rows):
+        if ent.get("cast_order") == "unordered":
+            unordered.add(ent["id"])
         title = ent.get("labels", {}).get("en", {}).get("value")
         date = _first_time(ent, "P577")
         if not (title and date) or not (y0 <= int(date[:4]) <= y1) or ent["id"] in excluded:
@@ -121,7 +155,7 @@ def build(y0: int, y1: int) -> dict:
         films[ent["id"]] = {
             "title": title, "date": date, "date_precision": _precision(ent, "P577"),
             "genres": [labels.get(g, g) for g in _ids(ent, "P136")][:5],
-            "cast": _ids(ent, "P161")[:40 if str(ent.get("cast_order", "")).startswith("unordered") else 12], "directors": _ids(ent, "P57")[:3],
+            "cast": _ids(ent, "P161")[:40 if ent["id"] in unordered else 12], "directors": _ids(ent, "P57")[:3],
             "distributors": [labels.get(x, x) for x in _ids(ent, "P750")][:3],
             "companies": [labels.get(x, x) for x in _ids(ent, "P272")][:3],
             "cost_usd": _usd(ent, "P2130"), "box_office_usd": _usd(ent, "P2142"),
@@ -130,8 +164,6 @@ def build(y0: int, y1: int) -> dict:
             "description": ent.get("descriptions", {}).get("en", {}).get("value", ""),
         }
     # films fetched in bulk have no statement order: bill by prior experience (no hindsight)
-    unordered = {json.loads(f.read_text()).get("id") for f in (RAW / "films").glob("*.json")
-                 if '"cast_order": "unordered' in f.read_text()}
     by_date = sorted(films.items(), key=lambda kv: kv[1]["date"])
     prior = {}
     for fid, fm in by_date:
