@@ -1,0 +1,16 @@
+# Validation anchors for the 1980 snapshot estimator (NOT used as inputs).
+# Approximate recollection of the 1979 exhibitors' poll of top money-making stars;
+# verify against the published Quigley list before relying on exact ranks.
+source: "Quigley Top Ten Money Making Stars Poll, 1979 (from memory - verify)"
+year: 1979
+top_box_office_stars:
+  - Burt Reynolds
+  - Clint Eastwood
+  - Jane Fonda
+  - Woody Allen
+  - Barbra Streisand
+  - Sylvester Stallone
+  - John Travolta
+  - Jill Clayburgh
+  - Roger Moore
+  - Mel Brooks

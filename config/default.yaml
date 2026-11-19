@@ -108,6 +108,7 @@ box_office:                         # starts from prototypes/tail_sketch.py
   marketing_k: 0.045               # awareness per $M (1980 dollars)
   fame_awareness: 0.55
   competition_k: 1.5               # strength of attention competition between films
+  dated_rival_weight: 0.4          # tracking's weight on rivals dated within ±2 weeks (partial overlap)
   reception_t_df: 4
   reception_scale: 0.16
   opening_weekend_share: 0.62
@@ -155,8 +156,12 @@ finance:
   default_monthly_costs: {newcomer: 1200, working: 2500, notable: 6000, star: 25000}
   fee_paid_at_start: 0.5
   day_job_monthly: 900             # 1980 $: side income for unknowns without recent paid work
-  day_job_fame_max: 0.02
+  day_job_fame_max: 0.05
   day_job_idle_weeks: 12
+
+jobbing:                            # TV guest spots, commercials, bit parts, stage (hsim/systems/jobbing.py)
+  base_weekly: 0.14                # weekly chance of an offer for a typical represented working actor
+  no_agent_factor: 0.25
 
 agents:
   sign_newcomer_yearly: 0.30       # base chance an unrepresented actor gets signed each year
@@ -173,7 +178,8 @@ personal:
   generated_for_real_people: [romance, breakup, engagement, marriage]   # never: illness, death, crime, scandal
   spark_base: 0.06
   attraction_threshold: 0.45
-  dating_to_marriage_weekly: 0.004
+  dating_to_marriage_weekly: 0.0015
+  min_courtship_weeks: 26
   breakup_weekly_base: 0.012
   divorce_weekly_base: 0.0012
   documented_protection: 1.0       # 1 = documented marriages only end via documented events or divergence
@@ -187,6 +193,7 @@ history:                            # historical snapshot loader (hsim/world/his
   max_billing: 8
   min_age: 8
   recency_years: 4
+  reach_power: 2.5               # convexity of film reach in fame/draw evidence (validated vs anchors)
   hindsight_weight: 0.5           # 0 = hidden talent judged only on pre-start record
   talent_noise_sd: 9              # success is evidence, not destiny
   tier_a_count: 400

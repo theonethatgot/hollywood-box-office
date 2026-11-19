@@ -17,7 +17,7 @@ import math
 
 from ..core import rng as R
 from ..core.state import WorldState
-from ..core.util import age_on, clamp
+from ..core.util import add_weeks as _add_weeks, age_on, clamp
 from . import decisions as D
 
 TAKEN = ("dating", "married")
@@ -175,7 +175,9 @@ def _progress(st, cfg) -> None:
         compat = 1 - abs(a.personality.get("temperament", 50) - b.personality.get("temperament", 50)) / 150
         apart = 1.4 if _working_apart(st, a, b) else 1.0
         if r.status == "dating":
-            if a.controller != "player" and b.controller != "player" and g.random() < pc["dating_to_marriage_weekly"] * compat * 2:
+            courted = (st.date >= _add_weeks(r.since, pc["min_courtship_weeks"])) if r.since else False
+            if (courted and a.controller != "player" and b.controller != "player"
+                    and g.random() < pc["dating_to_marriage_weekly"] * compat * 2):
                 if allowed(cfg, a, "marriage") and allowed(cfg, b, "marriage"):
                     r.status = "married"
                     for x, y in ((a, b), (b, a)):
@@ -279,6 +281,7 @@ def _apply_documented(st, cfg, ev, people) -> None:
     if ev.type == "death":
         p = people[0]
         p.death, p.active = st.date, False
+        release_commitments(st, p)
         if p.partner_id and p.partner_id in st.people:
             q = st.people[p.partner_id]
             q.partner_id, q.partner_status = None, None
@@ -305,6 +308,21 @@ def _apply_documented(st, cfg, ev, people) -> None:
            data={"event": ev.id, "verification": ev.verification, "sources": ev.sources})
 
 
+def release_commitments(st, p) -> None:
+    """After a death, roles on films not yet shooting go back to casting."""
+    for proj in st.projects.values():
+        if proj.stage not in ("development", "prepro"):
+            continue
+        for rid in proj.role_ids:
+            r = st.roles[rid]
+            if r.cast_id == p.id or (r.intended == p.id and not r.cast_id):
+                r.cast_id, r.status, r.fee = None, "open", 0.0
+                r.tried.append(p.id)
+        if proj.director_id == p.id:
+            proj.director_id = None
+    p.calendar = []
+
+
 # ------------------------------------------------------------ mortality ---
 def _mortality(st, cfg) -> None:
     gz = cfg["personal"]["fictional_mortality_gompertz"]
@@ -315,6 +333,7 @@ def _mortality(st, cfg) -> None:
         hz_week = gz["a"] * math.exp(gz["b"] * age) / 52
         if R.unit(st.seed, "mortality", pid, st.date) < hz_week:
             p.death, p.active = st.date, False
+            release_commitments(st, p)
             if p.partner_id and p.partner_id in st.people:
                 q = st.people[p.partner_id]
                 q.partner_id, q.partner_status = None, None

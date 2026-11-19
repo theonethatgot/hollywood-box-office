@@ -112,6 +112,7 @@ def build(st: WorldState, cfg: dict, packet_id: str) -> dict:
         },
         "pending_decisions": [_decision(d) for d in D.pending(st)],
         "continuity": _continuity(st, cfg),
+        "era": _era(st, cfg),
         "narrator_notes": st.notes[-20:],
     }
     return pk
@@ -215,13 +216,26 @@ def _people(st, cfg, canon) -> list:
     return out
 
 
+MOTIVE = {"money": "financial security and big paydays", "fame": "fame and visibility",
+          "prestige": "respect and awards", "art": "challenging, meaningful work", "stability": "a steady, sane life"}
+
+
+def motivation(p) -> str:
+    if not p.goals:
+        return ""
+    top = sorted(p.goals.items(), key=lambda kv: -kv[1])[:2]
+    if len(top) == 1:
+        return f"driven by {MOTIVE[top[0][0]]}"
+    return f"driven mostly by {MOTIVE[top[0][0]]}, and also by {MOTIVE[top[1][0]]}"
+
+
 def _person_card(st, p) -> dict:
     pl = st.player
     r = st.rel(pl.id, p.id, create=False)
     prof = "director" if "director" in p.roles else "actor"
     recent = [c for c in p.credits if c.get("kind") in ("film", "prior")][-3:]
     card = {"id": p.id, "name": p.name, "age": age_on(p.birth, st.date), "profession": prof,
-            "public_profile": fame_label(p.fame), "traits": p.traits, "bio": p.bio,
+            "public_profile": fame_label(p.fame), "traits": p.traits, "motivation": motivation(p), "bio": p.bio,
             "recent_work": [f"'{c['title']}' ({c['year']}, {c['role']})" for c in recent],
             "relationship_status": ("married (outside the industry)" if p.partner_status == "married_offscreen"
                                     else (f"{p.partner_status} {st.people[p.partner_id].name}" if p.partner_id in st.people
@@ -250,6 +264,13 @@ def _decision(d) -> dict:
     return out
 
 
+def _era(st, cfg) -> dict:
+    from ..systems import market
+    return {"year": int(st.date[:4]), "average_ticket_price": f"${market.ticket_price(cfg, st.date):.2f}",
+            "note": "The blockbuster era is a few years old; theatrical release dominates and home video is small but growing fast."
+            if st.date < "1983" else "Home video is becoming a real second market."}
+
+
 def _continuity(st, cfg) -> dict:
     pl = st.player
     credits = []
@@ -260,5 +281,14 @@ def _continuity(st, cfg) -> dict:
             line += f"; {money(prj.domestic)} domestic, critics {prj.critic_score:.0f}"
         credits.append(line + ")")
     earlier = [e for e in st.events[:st.packet_seq_mark] if pl.id in e["actors"] and e["salience"] >= 3]
+    scenes = []
+    for r in sorted(st.rels.values(), key=lambda r: (r.a, r.b)):
+        if pl.id in (r.a, r.b):
+            other = st.people[r.b if r.a == pl.id else r.a]
+            for h in r.history[-3:]:
+                scenes.append((h["date"], f"with {other.name}: {h['text']}"))
+    scenes += [(n["date"], n["text"]) for n in st.notes[-10:]]
+    scenes.sort()
     return {"career_so_far": credits[-12:],
-            "earlier_key_moments": [f"{e['date']}: {e['text']}" for e in earlier[-cfg['narrator']['continuity_events']:]]}
+            "earlier_key_moments": [f"{e['date']}: {e['text']}" for e in earlier[-cfg['narrator']['continuity_events']:]],
+            "recent_scenes_and_threads": [f"{dte}: {t}" for dte, t in scenes[-12:]]}

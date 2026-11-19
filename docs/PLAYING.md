@@ -8,8 +8,15 @@ In ChatGPT, create a **Project**, and paste `NARRATOR_GUIDE.md` into its instruc
 
 ## Start a career
 ```bash
-hsim new career1 --name "Nora Vance" --gender f --birth 1956-09-14 --background unknown
+hsim new career1 --historical --name "Nora Vance" --gender f --birth 1956-09-14 --background unknown
 ```
+- `--historical` loads the real 1980 industry: about 4,500 real actors and
+  directors, and real films in production and release. Their real casts are
+  likely, not guaranteed. Without it, the world is entirely fictional, apart
+  from the studio names.
+- `--start 1982-06-04` starts at a later date. The current data pack supports 1980–1984.
+- Optional, better billing order: build `data/local/imdb_billing.json` with
+  `python datapipe/imdb_billing.py`. It is for personal use only and is never committed.
 - `--background`: `unknown`, `working` or `star`. This sets your starting position:
   credits, fame, quote, agent and money. Your hidden talent is drawn from the same
   distribution as any NPC with that background.
@@ -47,11 +54,14 @@ block asks for it. Then export the next packet.
 
 ## Standing orders (delegation)
 - `auto_accept_auditions`: role sizes your agent books without asking.
+- `auto_accept_jobs`: if true (the default), your agent books TV guest spots,
+  commercials, bit parts and stage work that fit your calendar. Set it to false to
+  decide each one yourself, and add `jobs` to `interrupt_on` to stop time for them.
 - `auto_decline_offers_below_quote_pct`: for example, 60 turns down lowball offers automatically.
 - `let_agent_negotiate`: role sizes where offers are accepted or declined by
   your character's own goals, the same rule NPCs use.
 - `interrupt_on`: what stops time. Options: `offers`, `auditions_lead`,
-  `counter_offers`, `romance`, `premieres`, `nominations`.
+  `counter_offers`, `romance`, `premieres`, `nominations`, `jobs`.
 
 ## If something goes wrong
 - **ChatGPT forgot the engine block:** ask it to "end with the engine block".

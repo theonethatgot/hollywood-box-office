@@ -82,15 +82,34 @@ def expected_opening(st: WorldState, cfg: dict, p, observed_quality: float) -> f
     for s, pop in _segments(cfg, p.release_date or st.date).items():
         ap = min(0.95, p.breadth * p.segment_tilt.get(s, 1.0) * sm * (1.0 if not s.startswith("adult") else 0.75 + 0.5 * observed_quality / 100))
         adm += pop * aware * ap * bo["base_watch_rate"] * bo["opening_urgency"] * market.seasonality(cfg, p.release_date or st.date) / 1.15
-    # competition tracking can see: interest currently held by films in or near release
+    # competition tracking can see: films in release now, plus films dated to open
+    # within two weeks either side (release calendars are public in the trades)
     pop = sum(_segments(cfg, st.date).values())
-    others = sum(sg["interested"] + sg["repeat"] for q in st.projects.values()
-                 if q.stage == "released" and q.run.get("active") for sg in q.run["segments"].values())
+    rel = p.release_date or st.date
+    lo, hi = add_weeks(rel, -2), add_weeks(rel, 2)
+    others = 0.0
+    for q in st.projects.values():
+        if q.id == p.id:
+            continue
+        if q.stage == "released" and q.run.get("active"):
+            others += sum(sg["interested"] + sg["repeat"] for sg in q.run["segments"].values())
+        elif q.stage == "awaiting_release" and q.release_date and lo <= q.release_date <= hi:
+            others += cfg["box_office"]["dated_rival_weight"] * _expected_interest(st, cfg, q)
     adm /= 1 + bo["competition_k"] * others / pop
     screens = p.run.get("planned_screens") or _initial_screens(st, cfg, p)
     cap = screens * bo["seats_per_screen"] * bo["shows_per_week"] * bo["max_occupancy"] / 1e6
     adm = min(adm, cap)
     return adm * 1e6 * market.ticket_price(cfg, p.release_date or st.date) * bo["opening_weekend_share"]
+
+
+def _expected_interest(st, cfg, q) -> float:
+    """Neutral-reception estimate of the interested audience a dated film will open with."""
+    if q.pa_budget <= 0:
+        return 0.0
+    aware = _awareness0(st, cfg, q)
+    sm = _star_mult(st, q)
+    return sum(pop * aware * min(0.95, q.breadth * q.segment_tilt.get(s, 1.0) * sm)
+               for s, pop in _segments(cfg, q.release_date or st.date).items())
 
 
 def step(st: WorldState, cfg: dict, quiet: bool = False) -> None:

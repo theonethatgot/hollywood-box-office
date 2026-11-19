@@ -53,6 +53,7 @@ STUDIO_KEYS = [
     ("st-bv", ("disney", "buena vista", "touchstone")), ("st-ori", ("orion",)),
     ("st-avc", ("avco", "embassy")), ("st-nw", ("new world",)),
 ]
+NON_FEATURE = ("documentary", "concert film", "short film", "television film", "anthology")
 BILLING_W = [1.0, 0.6, 0.35, 0.22, 0.15, 0.10]
 FAME_QUANTILES = [(0.0, 0.0005), (0.5, 0.004), (0.75, 0.015), (0.9, 0.05), (0.95, 0.10),
                   (0.98, 0.22), (0.995, 0.45), (1.0, 0.80)]
@@ -171,10 +172,11 @@ def load_historical(st: WorldState, cfg: dict, pack: dict) -> None:
             if dt < start:
                 yrs = days_between(dt, start) / 365
                 dec = math.exp(-yrs / hc["recency_years"])
-                e["exposure"] += r * bw * dec
+                big = r ** hc["reach_power"]        # one big hit outweighs several small films
+                e["exposure"] += big * bw * dec
                 e["n_pre"] += 1
                 if idx <= 1:
-                    e["lead"] += r * dec
+                    e["lead"] += big * dec
                 (e.__setitem__("recent", e["recent"] + r * bw) if yrs <= 2 else e.__setitem__("older", e["older"] + r * bw))
                 e["first"] = min(e["first"] or dt, dt)
                 g = genre_of(f["genres"])
@@ -287,17 +289,36 @@ def load_historical(st: WorldState, cfg: dict, pack: dict) -> None:
                             "tier_a": len(tier_a), "source": pack.get("source")}
 
 
+def _premise_text(f: dict, genre: str) -> str:
+    t = (f.get("description") or f"{genre} film").strip().rstrip(".")
+    return t[0].upper() + t[1:] + "."
+
+
+def effective_date(fid: str, f: dict) -> str:
+    """Release dates known only to the year or month are spread deterministically
+    across that period (marked approximate) instead of piling onto one weekend."""
+    prec = f.get("date_precision", "day")
+    y, m = int(f["date"][:4]), int(f["date"][5:7])
+    u = R.stable_unit("release-date", fid)
+    if prec == "year":
+        return (d(f"{y}-02-01") + __import__("datetime").timedelta(days=int(u * 300))).isoformat()
+    if prec == "month":
+        return (d(f"{y}-{m:02d}-01") + __import__("datetime").timedelta(days=int(u * 27))).isoformat()
+    return f["date"]
+
+
 def _apply_local_billing(films: dict) -> dict:
     """If data/local/imdb_billing.json exists (local-only IMDb enrichment, see
     datapipe/imdb_billing.py), reorder each film's cast to IMDb billing order."""
     from ..core.config import ROOT
     path = ROOT / "data" / "local" / "imdb_billing.json"
     if not path.exists():
-        return films
+        return {fid: dict(f, date=effective_date(fid, f)) for fid, f in films.items()}
     import json
     billing = json.loads(path.read_text())
     out = {}
     for fid, f in films.items():
+        f = dict(f, date=effective_date(fid, f))
         order = billing.get(fid)
         if order:
             rank = {q: i for i, q in enumerate(order)}
@@ -350,7 +371,9 @@ def _documented_relationships(st, cfg, pack, in_world, credits) -> None:
                 elif me.partner_status is None:
                     me.partner_status = "married_offscreen"
                     me.provenance["spouse_outside_world"] = name_of(other) or "undocumented name"
-                if s1 and s1 <= end and (pid < other or not other_in):
+                deaths = [people.get(x, {}).get("death") for x in (pid, other)]
+                widowed = s1 and any(dd and abs(days_between(dd, s1)) <= 10 for dd in deaths)
+                if s1 and s1 <= end and not widowed and (pid < other or not other_in):
                     nm = name_of(other)
                     _event(st, [me.id] + ([f"wd:{other}"] if other_in else []), "divorce" if other_in else "divorce_outside",
                            s1, f"{me.name} and {nm} divorced." if nm else f"{me.name}'s marriage ended in divorce.",
@@ -390,6 +413,8 @@ def _historical_projects(st, cfg, pack, in_world) -> None:
     for fid, f in sorted(films.items(), key=lambda kv: (kv[1]["date"], kv[0])):
         if not (recent <= f["date"] < horizon):
             continue
+        if any(x in g_.lower() for g_ in f["genres"] for x in NON_FEATURE):
+            continue
         sid = studio_of(f)
         studio = st.studios.get(sid) or st.studios["st-ind"]
         g = R.stream(st.seed, "historical-film", fid)
@@ -404,7 +429,7 @@ def _historical_projects(st, cfg, pack, in_world) -> None:
         budget = f.get("cost_usd") or float(math.exp(g.normal(math.log(studio.budget_median), 0.5))) * 1e6 * market.infl(cfg, year(f["date"]))
         pid = st.new_id("prj")
         p = M.Project(id=pid, title=f["title"] if f["title"] not in used else f"{f['title']} ({year(f['date'])})",
-                      genre=genre, studio_id=studio.id, premise=(f.get("description") or f"A {genre} film.").capitalize() + ".",
+                      genre=genre, studio_id=studio.id, premise=_premise_text(f, genre),
                       budget=round(float(budget), 0), created=add_days(start, -400), script_quality=round(script, 2),
                       hook=round(hook, 2), breadth=round(gcfg["breadth"] * math.exp((hook - 50) / 50 * 0.6) * math.exp(g.normal(0, 0.3)), 4),
                       historical_ref=f"wd:{fid}")
@@ -431,6 +456,7 @@ def _historical_projects(st, cfg, pack, in_world) -> None:
             G._make_roles(st, cfg, p, g)
         st.projects[pid] = p
         G.schedule_from_release(cfg, p, f["date"], g)
+        _fit_schedule(cfg, p, [st.people[st.roles[r].intended] for r in p.role_ids if st.roles[r].intended], f["date"], g)
         dirs = [x for x in f["directors"] if x in in_world]
         if dirs:
             dperson = st.people[f"wd:{dirs[0]}"]
@@ -465,6 +491,31 @@ def _historical_projects(st, cfg, pack, in_world) -> None:
                                             "kind": "hold"})
         counts[studio.id] = counts.get(studio.id, 0) + 1
     st.market["historical_slate"] = counts
+
+
+def _fit_schedule(cfg, p, people, release, g) -> None:
+    """Inferred shoot windows are estimates. Use post-production slack so a person's
+    documented films do not collide; if no fit exists, keep the estimate (the
+    simulation will then treat it as a genuine scheduling conflict)."""
+    from ..core.util import overlaps
+
+    def clashes():
+        s0, s1 = p.shoot_start, add_weeks(p.shoot_end, 1)
+        return any(overlaps(c["start"], c["end"], s0, s1) for x in people for c in x.calendar
+                   if c["project_id"] != p.id and c["kind"] in ("shoot", "hold"))
+    if not people or not clashes():
+        return
+    base = p.post_weeks
+    for delta in (-2, 2, -4, 4, -6, 6, -8, 8, -10, 10, -12, 12, -14, 14, -16, 16):
+        pw = base + delta
+        if not 10 <= pw <= 48:
+            continue
+        p.post_weeks = pw
+        G.schedule_from_release(cfg, p, release, g)
+        if not clashes():
+            return
+    p.post_weeks = base
+    G.schedule_from_release(cfg, p, release, g)
 
 
 def _cast_intended(st, cfg, p) -> None:

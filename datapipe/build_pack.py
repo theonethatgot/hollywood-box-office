@@ -55,8 +55,35 @@ def _iso(t: str, prec: int = 11) -> str | None:
 
 
 def _first_time(ent, prop):
-    ts = sorted(t for t in (_wb_time(_val(c)) for c in ent.get("claims", {}).get(prop, [])) if t)
-    return ts[0] if ts else None
+    """Most precise date first, then earliest (a festival date beats a bare year)."""
+    vals = []
+    for c in ent.get("claims", {}).get(prop, []):
+        v = _val(c)
+        t = _wb_time(v)
+        if t:
+            vals.append((-v.get("precision", 11), t))
+    return sorted(vals)[0][1] if vals else None
+
+
+def _precision(ent, prop) -> str:
+    """'day' | 'month' | 'year' for the earliest date of a property."""
+    best = None
+    for c in ent.get("claims", {}).get(prop, []):
+        v = _val(c)
+        if isinstance(v, dict) and "time" in v:
+            t = _wb_time(v)
+            if t and (best is None or t < best[0]):
+                best = (t, v.get("precision", 11), v["time"])
+    for c in ent.get("claims", {}).get(prop, []):
+        v = _val(c)
+        if isinstance(v, dict) and "time" in v and v.get("precision", 11) > (best[1] if best else -1):
+            best = (_wb_time(v), v.get("precision", 11), v["time"])
+    if not best:
+        return "year"
+    t, prec, raw = best
+    if prec >= 11 and raw[6:11] == "01-01" and ent.get("cast_order") == "unordered":   # no precision info
+        return "year"          # bulk SPARQL dates lose precision; Jan 1 almost always means "year only"
+    return "day" if prec >= 11 else "month" if prec == 10 else "year"
 
 
 def _usd(ent, prop):
@@ -77,17 +104,24 @@ def build(y0: int, y1: int) -> dict:
 
     labels = {qid(r["x"]): r["label"] for r in rows("labels")}
     excluded = {qid(r["f"]) for r in rows("exclude")}
+    dates = {}
+    for r in rows("filmdates"):
+        dates.setdefault(qid(r["f"]), []).append({"mainsnak": {"datavalue": {"value": {
+            "time": ("+" + r["t"]) if not r["t"].startswith(("+", "-")) else r["t"], "precision": int(r["prec"])}}}})
     films = {}
     for f in sorted((RAW / "films").glob("*.json")):
         ent = json.loads(f.read_text())
+        if ent.get("cast_order") == "unordered" and ent["id"] in dates:
+            ent["claims"]["P577"] = dates[ent["id"]]
+            ent["cast_order"] = "unordered-dated"
         title = ent.get("labels", {}).get("en", {}).get("value")
         date = _first_time(ent, "P577")
         if not (title and date) or not (y0 <= int(date[:4]) <= y1) or ent["id"] in excluded:
             continue
         films[ent["id"]] = {
-            "title": title, "date": date,
+            "title": title, "date": date, "date_precision": _precision(ent, "P577"),
             "genres": [labels.get(g, g) for g in _ids(ent, "P136")][:5],
-            "cast": _ids(ent, "P161")[:40 if ent.get("cast_order") == "unordered" else 12], "directors": _ids(ent, "P57")[:3],
+            "cast": _ids(ent, "P161")[:40 if str(ent.get("cast_order", "")).startswith("unordered") else 12], "directors": _ids(ent, "P57")[:3],
             "distributors": [labels.get(x, x) for x in _ids(ent, "P750")][:3],
             "companies": [labels.get(x, x) for x in _ids(ent, "P272")][:3],
             "cost_usd": _usd(ent, "P2130"), "box_office_usd": _usd(ent, "P2142"),
@@ -97,7 +131,7 @@ def build(y0: int, y1: int) -> dict:
         }
     # films fetched in bulk have no statement order: bill by prior experience (no hindsight)
     unordered = {json.loads(f.read_text()).get("id") for f in (RAW / "films").glob("*.json")
-                 if '"cast_order": "unordered"' in f.read_text()}
+                 if '"cast_order": "unordered' in f.read_text()}
     by_date = sorted(films.items(), key=lambda kv: kv[1]["date"])
     prior = {}
     for fid, fm in by_date:

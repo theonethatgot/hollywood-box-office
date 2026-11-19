@@ -385,6 +385,7 @@ def default_orders() -> dict:
     return {
         "auto_accept_auditions": ["supporting", "colead", "lead"],
         "auto_decline_offers_below_quote_pct": 0,
+        "auto_accept_jobs": True,
         "let_agent_negotiate": [],
         "interrupt_on": ["offers", "auditions_lead", "counter_offers", "romance", "premieres", "nominations"],
     }

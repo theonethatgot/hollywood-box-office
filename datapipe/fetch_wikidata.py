@@ -123,11 +123,18 @@ FILM_META = """SELECT ?f ?label ?desc ?sl (MIN(?d) AS ?date) (MAX(?cost) AS ?cos
 }} GROUP BY ?f ?label ?desc ?sl"""
 
 
+FILM_DATES = """SELECT ?f ?t ?prec WHERE {{
+  VALUES ?f {{ {values} }}
+  ?f p:P577/psv:P577 [ wikibase:timeValue ?t; wikibase:timePrecision ?prec ].
+}}"""
+
+
 def bulk_films(missing: list, out: Path) -> None:
     """Facts for films not fetched as entities, via bulk SPARQL. Cast order is lost
     (marked 'unordered'); build_pack.py applies a hindsight-free ordering."""
     chunked(FILM_ITEMS, missing, "filmitems", 350)
     chunked(FILM_META, missing, "filmmeta", 350)
+    chunked(FILM_DATES, missing, "filmdates", 700)
     props = {"http://www.wikidata.org/prop/direct/" + k: k for k in ("P136", "P750", "P272", "P155", "P179", "P57", "P161")}
     items, meta = {}, {}
     for path in RAW.glob("q_filmitems_*.json"):
@@ -185,6 +192,7 @@ def main():
     ap.add_argument("--focus-year", type=int, default=1980, help="fetch films nearest this start year first")
     ap.add_argument("--entities-only", action="store_true")
     ap.add_argument("--bulk-films", action="store_true", help="fetch remaining films via bulk SPARQL (cast order lost)")
+    ap.add_argument("--dates-only", action="store_true", help="fetch all dated P577 values for bulk-fetched films")
     ap.add_argument("--people-now", action="store_true", help="skip entity fetching; look up people of films already fetched")
     a = ap.parse_args()
     y0, y1 = a.from_year, a.to_year
@@ -205,6 +213,10 @@ def main():
     if a.bulk_films:
         bulk_films(todo, out)
         todo = []
+    if a.dates_only:
+        unordered = [p.stem for p in out.glob("*.json") if '"cast_order": "unordered"' in p.read_text()]
+        chunked(FILM_DATES, sorted(unordered), "filmdates", 700)
+        return
     print(f"film entities: {len(todo)} to fetch", flush=True)
     keep = ("P577", "P136", "P161", "P57", "P750", "P272", "P2130", "P2142", "P155", "P179")
     for i, f in enumerate(todo):

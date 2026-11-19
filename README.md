@@ -13,12 +13,14 @@ then judges.
 
 ```bash
 pip install -e .
-hsim new career1 --name "Nora Vance" --gender f --birth 1956-09-14 --background unknown
+hsim new career1 --historical --name "Nora Vance" --gender f --birth 1956-09-14 --background unknown
 hsim advance career1 --weeks 8
 hsim packet career1
 python -m pytest -q              # tests
 python tools/batch.py --seeds 4 --years 2 --processes 4   # calibration report
 ```
+
+Historical data: `data/history/` (Wikidata, CC0), built by `datapipe/`; see `data/history/README.md` for licensing.
 
 Layout: `hsim/` engine (core, models, world genesis, systems, narrator, io, service, CLI),
 `config/` all coefficients, `tools/` batch calibration, `tests/`, `prototypes/` throwaway sketches.

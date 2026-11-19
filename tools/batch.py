@@ -28,9 +28,9 @@ from hsim.systems import tick as T  # noqa: E402
 
 
 def run_world(args) -> dict:
-    seed, years, start = args
+    seed, years, start, pack = args
     cfg = load_config()
-    st = genesis_state(cfg, {"seed": seed, "start": start, "player": {"background": "unknown"}})
+    st = genesis_state(cfg, {"seed": seed, "start": start, "data_pack": pack, "player": {"background": "unknown"}})
     st.orders.update({"interrupt_on": [], "let_agent_negotiate": ["lead", "colead", "supporting"],
                       "auto_accept_auditions": ["lead", "colead", "supporting"]})
     snap0 = {pid: (p.fame, p.bankability) for pid, p in st.people.items() if "actor" in p.roles}
@@ -128,8 +128,13 @@ def main():
     ap.add_argument("--start", default="1980-01-04")
     ap.add_argument("--processes", type=int, default=1)
     ap.add_argument("--json", default=None)
+    ap.add_argument("--historical", action="store_true", help="use the default historical data pack")
     a = ap.parse_args()
-    jobs = [(s, a.years, a.start) for s in range(a.first_seed, a.first_seed + a.seeds)]
+    pack = None
+    if a.historical:
+        from hsim.core.config import ROOT
+        pack = str(ROOT / load_config()["history"]["default_pack"])
+    jobs = [(s, a.years, a.start, pack) for s in range(a.first_seed, a.first_seed + a.seeds)]
     if a.processes > 1:
         with ProcessPoolExecutor(a.processes) as ex:
             results = list(ex.map(run_world, jobs))
