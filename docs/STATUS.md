@@ -174,6 +174,53 @@ with a regression test (listed in that README).
 renamed when re-gendered; narrative canon about someone the protagonist never met is flagged; resolved initiatives
 stay in `continuity`; people with history come before small-part co-stars on the people list.
 
+## January 1990 historical expansion
+**Data.** Default pack `data/history/wikidata_1965_1992.json` (CC0): 9,549 US-origin feature films and 16,260
+people. It now includes animated features, which Wikidata types as "animated film" (missed before) and whose
+casts are voice actors (P725). The 1965–74 films give 1990 careers their early credits (*Chinatown*,
+*The Godfather*). Local-only IMDb overlay (`data/local/`, never committed): billing order and character names
+for 8,271 pack films; 1,603 notable foreign films released in the US (about 55–75 a year); 15,087 IMDb-only
+people (birth year only).
+
+**Rolling intake.** Each month, real films whose release enters the 24-month horizon become projects
+(usually in development), and the real people they need arrive. Arrivals are judged only on their record
+before the campaign start, so later history never leaks in. Intake is deterministic and replayed; the save
+records the pack and overlay versions, and `hsim verify` reports if they changed.
+
+**Era settings.** Studios have active years and year-indexed slates and budgets. In 1990: Paramount,
+Universal, Warner Bros., Columbia, TriStar, Fox, UA, MGM, Buena Vista, Orion (winding down 1991–92), New Line,
+Miramax and independents; AVCO Embassy and New World have closed. Market tables run to 1995. Ancillary revenue
+follows the home-video era. An era audience scale accounts for nearly twice as many releases competing for a
+slightly larger audience.
+
+**Documented casting is a strong prior, not a guarantee.** Established names (draw ≥ 35) get the documented
+part offered directly. Parts that went to people who weren't yet a draw are auditioned, with the documented
+actor always seen and favoured in the final pick. In a three-year run, documented casting held for about 80% of
+principal parts (stars and non-stars alike); the rest diverged (unavailable, declined, or beaten).
+
+**Fixes found by the 1990 smoke test.** Actor-directors were blocked from starring in their own films (*Dick
+Tracy*, *Dances with Wolves*). A hold on a film blocked that film's own casting. Real people with no pre-start
+record were read as untalented instead of unknown. Genesis was too slow (121 s → ~40 s) and so were weekly
+ticks (casting long lists, age-bucketed candidate pools, memoised TV fit; agents still submit from the whole
+plausible pool).
+
+**Three-year progression (1990-01-05 → 1993-01-01, seed 7, a real save driven by commands).**
+| Measure | Result |
+|---|---|
+| Replay from genesis (13 commands, 156 weeks) | identical state hash |
+| Rolling intake | 457 real films and 1,011 real people entered during play |
+| Real releases per year (1990 / 1991 / 1992) | 469 / 486 / 458 (MPAA counted ~410–480 new releases incl. imports) |
+| Admissions (1990 / 1991 / 1992) | 1.21 / 1.24 / 1.16 billion (reference 1.19 / 1.14 / 1.17) |
+| Documented principal casting held | 81% of non-star parts, 78% of star parts |
+| Fictional actors' share of real films' principal parts | ~3% (46 leads, 46 coleads, 40 supporting in 1990–92); ~7% of featured parts |
+| Yearly #1 film | $142M (*Ghost*), $96M, $95M. **Far below history** (*Home Alone* $285M, *Terminator 2* $205M) |
+| After the pack ends (late 1992) | studio slates refill with fictional productions; no real films after 1992 until the pack is extended |
+
+**Validation (`tools/validate_start.py`, 5 January 1990, seed 1).** 14 of 18 anchor films match their
+documented stage and lead. Pre-1990 credits are correct for the anchor actors. Leakage checks pass (no
+post-start credits, honours or bio facts). For a 27-year-old actor there are 541 auditioned principal parts
+and 856 featured parts in films starting within two years.
+
 ## Calibration (4 historical worlds × 2 years, 1980–81, 1980 dollars)
 | Metric | Simulated | Reference / note |
 |---|---|---|
@@ -210,8 +257,14 @@ Moore is effectively missing because his Bond films are British productions.
 Six of ten anchors are in the top 50 of 3,595 real actors.
 
 ## Open issues (next)
-1. **Calibration:** the current historical pack's box-office tail is thinner than the literature (Hill α ≈ 2.5
-   on seeds 1–2, target < 2) and the yearly #1 is low (~$120M vs ~$181–212M). Re-tune after coverage (item 2).
+1. **Calibration:** the box-office tail is too thin: yearly #1 films reach about half their real grosses (1980s
+   Hill α ≈ 2.5, target < 2; 1990 #1 $142M vs *Home Alone* $285M). The 1990s audience scale fixes total
+   admissions but makes hits smaller still. The tail model (word of mouth, repeat viewing, screen expansion for
+   breakouts) needs re-tuning against recorded grosses.
+1a. **1990 stages:** production dates aren't documented; shoot windows inferred from release dates miss long
+   post-productions (*Dances with Wolves*, *The Silence of the Lambs*, *The Godfather Part III* start too late).
+   Year-only release dates drop some notable films from the in-release window (*Born on the Fourth of July*).
+1b. **Pack range:** real films end with 1992 releases. Extend the pack (1993–96) before playing past 1992.
 2. **Coverage:** include UK/US co-productions and US-distributed foreign films (Bond, *Superman*...).
 3. **Estimator:** use recorded box office more strongly where present; Tier A personality extraction from biographies (with citations).
 4. **Deaths during a shoot:** roles reopen for films not yet shooting; a death mid-shoot isn't handled yet.
@@ -224,10 +277,12 @@ Six of ten anchors are in the top 50 of 3,595 real actors.
    are not modelled.
 
 ## Data and licensing
-- Committed: `data/history/wikidata_1975_1989.json` (CC0 facts only), `data/reference/` anchors.
-- Local only (gitignored): `data/raw/` downloads, `data/local/imdb_billing.json` (IMDb billing order;
-  personal non-commercial use, never committed). Without the local billing file, cast order falls back
-  to Wikidata statement order (now fetched for every film in the pack).
+- Committed: `data/history/wikidata_1965_1992.json` (default) and `wikidata_1975_1989.json` (older saves),
+  CC0 facts only; `data/reference/` anchors.
+- Local only (gitignored): `data/raw/` downloads; `data/local/imdb_overlay.json` and `imdb_<years>.json`
+  (IMDb billing, character names, notable foreign films released in the US, IMDb-only people; personal
+  non-commercial use, never committed). Without the overlay the simulation runs on the Wikidata pack alone.
+- Replay needs the same pack and overlay the save was created with (`hsim verify` says so if they changed).
 
 ## Known simplifications
 - One international bucket; TV and theatre exist only as jobbing work.

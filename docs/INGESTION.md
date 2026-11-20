@@ -108,3 +108,21 @@ Estimated end-to-end for a January 1990 pack (1985–92): Wikidata ~3 min plus I
 Each fact keeps its source: committed pack = Wikidata (CC0); `data/local/` overlays = IMDb (and TMDb if
 used), tagged by source and never committed. Where sources disagree (e.g. a release date), Wikidata's dated
 claim wins unless it is only month or year precise.
+
+## January 1990 expansion: pipeline runtimes (measured)
+| Step | Time |
+|---|---|
+| Wikidata 1990–92 facts, from nothing | 151 s |
+| Re-list 1975–92 after the film-class fix | 180 s |
+| Statement order, 1,554 films (1975–92 gaps) | 161 s |
+| Wikidata 1965–74 facts + statement order (2,603 films) | 1,133 s (statement order dominates; one 502 retried) |
+| Voice casts (P725) for 9,676 films | 219 s |
+| Build pack 1965–92 (9.1 MB) | 6 s |
+| IMDb datasets download (~2 GB) | ~80 s |
+| IMDb index 1965–92 (178k titles, 491k people) | 170 s |
+| IMDb overlay | 4–8 s |
+| Genesis, 5 January 1990 | ~40 s (was 121 s before optimisation) |
+| Simulation | ~6–8 s per week (a 4-week turn ≈ 25–30 s); 3 years ≈ 21 min; replay of 3 years ≈ 21 min |
+
+Extending to later years (e.g. 1993–96) is incremental: fetch the new range with `--statement-order`
+(~5–10 min), rebuild the pack and overlay (~3 min).
