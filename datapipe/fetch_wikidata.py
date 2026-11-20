@@ -129,12 +129,17 @@ class Client:
 
 
 # ----------------------------------------------------------------- queries ---
+# Film classes, one query each (a VALUES join over classes times out on the public endpoint):
+# "film", plus "animated film" and "animated feature film", because many animated features
+# (e.g. Disney's 1989-91 releases) are typed only as animated film.
+FILM_CLASSES = ("Q11424", "Q202866", "Q29168811")
+
 FILMS = """SELECT ?f (MIN(YEAR(?d)) AS ?y) WHERE {{
-  ?f wdt:P31 wd:Q11424; wdt:P495 wd:Q30; wdt:P577 ?d.
+  ?f wdt:P31 wd:{cls}; wdt:P495 wd:Q30; wdt:P577 ?d.
   FILTER(YEAR(?d) >= {y0} && YEAR(?d) <= {y1}) }} GROUP BY ?f"""
 
 EXCLUDE = """SELECT DISTINCT ?f WHERE {{
-  ?f wdt:P31 wd:Q11424; wdt:P495 wd:Q30; wdt:P577 ?d.
+  ?f wdt:P31 wd:{cls}; wdt:P495 wd:Q30; wdt:P577 ?d.
   FILTER(YEAR(?d) >= {y0} && YEAR(?d) <= {y1})
   {{ ?f wdt:P31 ?c. VALUES ?c {{ wd:Q24862 wd:Q506240 wd:Q93204 wd:Q21191270 wd:Q1261214 }} }}
   UNION {{ ?f wdt:P2047 ?dur. FILTER(?dur < 60) }}
@@ -222,15 +227,28 @@ class Ingest:
             self.store.commit()
             self.client.stat(name, "items", len(chunk))
 
-    def film_list(self, y0: int, y1: int) -> dict:
-        done = self.store.years_done()
+    def film_list(self, y0: int, y1: int, relist: bool = False) -> dict:
+        done = set() if relist else self.store.years_done()
         missing = [y for y in range(y0, y1 + 1) if y not in done]
-        for k in range(0, len(missing), 5):
-            a, b = missing[k], missing[min(k + 4, len(missing) - 1)]
-            rows = self.sparql(FILMS.format(y0=a, y1=b), "film_list")
-            excluded = self.sparql(EXCLUDE.format(y0=a, y1=b), "film_list")
+        spans = [(missing[k], missing[min(k + 4, len(missing) - 1)]) for k in range(0, len(missing), 5)][::-1]
+        while spans:
+            a, b = spans.pop()
+            try:
+                rows, excluded = [], []
+                for cls in FILM_CLASSES:
+                    rows += self.sparql(FILMS.format(cls=cls, y0=a, y1=b), "film_list")
+                    excluded += self.sparql(EXCLUDE.format(cls=cls, y0=a, y1=b), "film_list")
+            except QueryTooHeavy:
+                if a == b:
+                    raise
+                self.client.stat("film_list", "split_chunks")
+                spans += [(y, y) for y in range(b, a - 1, -1)]          # one year per query
+                continue
             self.store.put_rows("exclude", "f", excluded)
-            self.store.put_films({q(r["f"]): int(r["y"]) for r in rows}, range(a, b + 1))
+            year_of = {}
+            for r in rows:                                   # a film in two classes: earliest year
+                year_of[q(r["f"])] = min(int(r["y"]), year_of.get(q(r["f"]), 9999))
+            self.store.put_films(year_of, range(a, b + 1))
             self.store.commit()
         films = self.store.films(y0, y1)
         excl = {q(r["f"]) for r in self.store.rows("exclude")}
@@ -275,7 +293,7 @@ class Ingest:
 
 
 def run(y0: int, y1: int, statement_order: bool, workers: int, min_interval: float,
-        entity_interval: float = 0.1) -> dict:
+        entity_interval: float = 0.1, relist: bool = False) -> dict:
     store = Store()
     imported = import_legacy(store, RAW)
     if imported["entities"] or imported["rows"]:
@@ -283,7 +301,7 @@ def run(y0: int, y1: int, statement_order: bool, workers: int, min_interval: flo
     client = Client(min_interval=min_interval, host_min={"www.wikidata.org": entity_interval})
     ing = Ingest(store, client)
     t0 = time.time()
-    films = ing.film_list(y0, y1)
+    films = ing.film_list(y0, y1, relist=relist)
     ids = sorted(films)
     print(f"films {y0}-{y1}: {len(ids)}", flush=True)
     for name in ("filmitems", "filmmeta", "filmdates", "castroles"):
@@ -315,8 +333,10 @@ def main():
     ap.add_argument("--min-interval", type=float, default=0.5, help="minimum seconds between SPARQL requests")
     ap.add_argument("--entity-interval", type=float, default=0.1,
                     help="minimum seconds between Special:EntityData requests across all workers (0.1 = max 600/min)")
+    ap.add_argument("--relist", action="store_true",
+                    help="re-run the film-list queries for the range (after a change to which film classes count)")
     a = ap.parse_args()
-    run(a.from_year, a.to_year, a.statement_order, a.workers, a.min_interval, a.entity_interval)
+    run(a.from_year, a.to_year, a.statement_order, a.workers, a.min_interval, a.entity_interval, a.relist)
 
 
 if __name__ == "__main__":
