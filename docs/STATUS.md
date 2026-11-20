@@ -122,6 +122,49 @@ Example packets: `docs/examples/`.
   as a male role). Candidate filtering already respected the role's gender; descriptions now match it.
   Neutral parts stay gender-flexible. Film roles were unaffected (0 of 52 checked mismatched).
 
+## Initiative and continuity pass
+Priorities: technical correctness, a flexible narrator-to-engine interface, agents with initiative,
+and consequential context without busywork.
+
+**Three levels of canon** (reply block; see NARRATOR_GUIDE.md):
+- *Hard canon*: engine-confirmed facts (unchanged).
+- *Narrative canon* (`narrative`): nonconsequential details the narrator creates, optionally `about`
+  people (names or ids). Persisted, returned in `narrative_canon` and on people cards. Entries that read
+  like outcomes ("got the part", money, "married") are flagged and change nothing.
+- *Proposed consequential canon* (`initiatives`): `inquire`, `pursue_project`, `meet`, `introduction`,
+  `social`, `publicity`, `reposition`, `develop_project` (with `attach` / `revise` follow-ups). Targets
+  resolve by name or id (ambiguity and unknown names are reported). The engine answers `accepted`,
+  `partial` (a counter), `rejected` with the concrete reason (dates, age range, type, "a bigger name",
+  "pays below your quote", "earmarked for an attached actor"), or `pending` over weeks; initiatives keep a
+  history. Initiatives can't set outcomes; a successful push only gets you seen.
+
+**Agents with initiative** (same rules for every client; a test swaps the protagonist's controller and
+compares): weekly calls are limited by hustle. Agents push clients who just missed a casting director's
+list on parts worth it (size, film, the client's goals, proven niche, earnings), and clients whose
+director already rates them on films casting soon. A director's regard and the agent's credibility with
+the CD help; failed pushes cost credibility; placements build it. CDs add at most three pushed actors per
+session. Client directives (`reposition`) constrain submissions, TV and commercials. Agents no longer
+submit clients for parts far below their quote unless the part suits their goals. In a 40-week test world
+about half of ~435 pushes were agreed and ~10 led to a casting: being seen is not being cast.
+
+**Context, not busywork:** packets add `standing_changes` (labels before → after, with the events that
+moved them, or "momentum fades on its own"), `agent` (strategy, how much attention you get and why,
+directives, pushes this period, doors left open), `initiatives`, people cards with `why_here` and
+`lately` (what they did on their own that you could know). The engine no longer invents the
+protagonist's casual social life; premieres (with reasons) and NPC friendships remain.
+
+**Fixes (with regression tests):** `quiet_period` is false while shooting or on any job (`working` lists
+them); weekday words in event text must match the event date (a "Sunday barbecue" logged on Fridays and a
+comedy premise "the wedding on Saturday" were removed); on-set chemistry for the protagonist respects
+their own orientation and waits 26 weeks before re-prompting about the same person (a demo career got four
+prompts in five weeks, one with a man for a protagonist attracted only to women); the premieres
+interrupt stops on an opening, not every weekend of the run; a character's key scenes are distinct; an
+agent's read of the room used the protagonist's rank instead of their client's (caught before release).
+Replay determinism and guest-part gender (previous pass) keep their tests; all saves replay.
+
+**Demonstration:** `docs/examples/initiatives/` (see its README) is a real saved career, Daniel Brooks,
+on the historical 1980 world.
+
 ## Calibration (4 historical worlds × 2 years, 1980–81, 1980 dollars)
 | Metric | Simulated | Reference / note |
 |---|---|---|
@@ -149,7 +192,12 @@ Six of ten anchors are in the top 50 of 3,595 real actors.
 2. **Estimator:** use recorded box office more strongly where present; Tier A personality extraction from biographies (with citations).
 3. **Deaths during a shoot:** roles reopen for films not yet shooting; a death mid-shoot isn't handled yet.
 4. **Profitability** against era studio financials; per-era ancillary.
-5. Agents as people, deeper NPC goals, awards season detail, then Phases 3–6 (DESIGN.md §11).
+5. Deeper NPC goals (NPCs don't yet originate initiatives like develop_project), awards season detail,
+   then Phases 3–6 (DESIGN.md §11).
+6. Generated fictional names can collide with real people (a fictional director named "Charlie Kaufman"
+   appeared); filter generated names against the real-person index.
+7. Packages: only one attachment affects a studio's read; financing, producers and turnaround deals
+   are not modelled.
 
 ## Data and licensing
 - Committed: `data/history/wikidata_1975_1989.json` (CC0 facts only), `data/reference/` anchors.
@@ -159,6 +207,6 @@ Six of ten anchors are in the top 50 of 3,595 real actors.
 
 ## Known simplifications
 - One international bucket; TV and theatre exist only as jobbing work.
-- Agents are agencies, not individuals.
+- Agents are named people inside agencies; their book, hustle and CD relationships are simple.
 - The protagonist is exempt from generated mortality (a deliberate, documented exception).
 - Generated "prior credits" for fictional NPCs are fictional titles.

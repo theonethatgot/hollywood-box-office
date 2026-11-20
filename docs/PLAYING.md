@@ -36,8 +36,17 @@ hsim packet career1                   # writes play/career1/pkt-0000N.md
 hsim submit career1 play/career1/reply.md
 hsim packet career1
 ```
-`submit` applies your decisions, rules on proposals and advances time if the
-block asks for it. Then export the next packet.
+`submit` applies your decisions, adjudicates initiatives and proposals, stores
+narrative details, and advances time if the block asks for it. Then export the next packet.
+
+## Taking the initiative
+You don't have to wait for the phone to ring. Tell ChatGPT what Daniel or Nora wants to try
+(get seen for a film in the trades, meet a director, ask a friend for an introduction, hire a
+publicist, steer the agent away from TV, write an original script) and it will put an
+`initiatives` entry in the engine block. The engine rules on it with the same rules NPCs face:
+yes, a counter ("not that part, but this one"), no with the reason, or a process that takes
+weeks. Results arrive in the next packet under `rulings` and `initiatives`. Details that
+should simply be remembered (a habit, an apartment, a rehearsal) go under `narrative`.
 
 ## Useful commands
 | Command | What it does |

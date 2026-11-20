@@ -231,15 +231,18 @@ def _people(st, cfg, canon) -> list:
         add(pl.partner_id, "your partner")
     if pl.agent_person_id:
         add(pl.agent_person_id, "your agent")
+    featured = []                                   # small-part co-stars come after people with real history
     for pid, p in sorted(st.projects.items()):
         if p.stage in ("released", "dead"):
             continue
         cast = [st.roles[r].cast_id for r in p.role_ids if st.roles[r].cast_id]
         if pl.id in cast:
             add(p.director_id, f"directing your film '{p.title}'")
-            for x in cast:
-                if x != pl.id:
-                    add(x, f"in the cast of your film '{p.title}'")
+            for r in p.role_ids:
+                x = st.roles[r].cast_id
+                if x and x != pl.id:
+                    item = (x, f"in the cast of your film '{p.title}' ({st.roles[r].importance})")
+                    (featured.append(item) if st.roles[r].importance == "featured" else ids.append(item))
     for d in D.pending(st):
         prj = st.projects.get(d.refs.get("project")) or (
             st.projects.get(st.offers[d.refs["offer"]].project_id) if d.refs.get("offer") in st.offers else None)
@@ -255,13 +258,14 @@ def _people(st, cfg, canon) -> list:
         if j["person"] == pl.id:
             for c in j.get("colleagues", [])[:5]:
                 add(c, f"working with you on {j.get('show') or j.get('film') or j.get('play') or j['name']}")
+    for n in reversed(st.narrative[-30:]):
+        for a_ in n.get("about", []):
+            add(a_, f"in your story's narrative canon ({n['date']})")
     for e in canon:
         for a_ in e["actors"]:
             if a_ != pl.id:
                 add(a_, f"in this period's events ({e['type'].replace('_', ' ')}, {e['date']})")
-    for n in st.narrative[-30:]:
-        for a_ in n.get("about", []):
-            add(a_, "in recent narrative canon")
+    ids += featured
     rels = sorted((r for r in st.rels.values() if pl.id in (r.a, r.b) and (r.history or r.contact_weeks)),
                   key=lambda r: (r.history[-1]["date"] if r.history else "", abs(r.affinity)), reverse=True)
     for r in rels[:8]:
@@ -680,7 +684,7 @@ def _era(st, cfg) -> dict:
 def _continuity(st, cfg) -> dict:
     pl = st.player
     credits = []
-    for c in pl.credits:
+    for c in sorted(pl.credits, key=lambda c: int(c.get("year", 0) or 0)):
         line = f"{c['year']}: '{c['title']}' ({c['role']}"
         prj = st.projects.get(c.get("project_id")) if c.get("project_id") else None
         if prj and prj.stage == "released" and prj.critic_score is not None:
@@ -695,6 +699,10 @@ def _continuity(st, cfg) -> dict:
                 scenes.append((h["date"], f"with {other.name}: {h['text']}"))
     scenes += [(n["date"], n["text"]) for n in st.notes[-10:]]
     scenes.sort()
+    closed = [i for i in st.initiatives.values() if i["status"] not in ("pending", "writing", "pitching", "watching")]
+    initiatives = [f"{i['created']} {i['kind'].replace('_', ' ')}: " + " -> ".join(s_["text"] for s_ in
+                   (i["steps"][:1] + i["steps"][-1:] if len(i["steps"]) > 1 else i["steps"])) for i in closed]
     return {"career_so_far": credits[-12:],
+            "initiatives_resolved": initiatives[-8:],
             "earlier_key_moments": [f"{e['date']}: {e['text']}" for e in earlier[-cfg['narrator']['continuity_events']:]],
             "recent_scenes_and_threads": [f"{dte}: {t}" for dte, t in scenes[-12:]]}

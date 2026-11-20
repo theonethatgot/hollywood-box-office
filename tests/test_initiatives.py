@@ -141,6 +141,10 @@ def test_meeting_resolves_later_with_a_reason(tmp_path, cfg, params):
     assert ini["status"] in ("succeeded", "failed") and len(ini["steps"]) == 2
     pk = g.command({"type": "packet"})["packet"]
     assert any(x["id"] == iid for x in pk["initiatives"])
+    g.command({"type": "advance", "weeks": 2})
+    later = g.command({"type": "packet"})["packet"]           # closed initiatives stay in continuity
+    assert not any(x["id"] == iid for x in later["initiatives"])
+    assert any(target.name in x for x in later["continuity"]["initiatives_resolved"])
     assert g.replay_check()["match"]
 
 
