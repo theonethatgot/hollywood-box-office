@@ -207,3 +207,19 @@ def test_packet_exposes_agent_plan_and_standing(tmp_path, cfg, params):
     if pk["standing_changes"]["changes"]:
         assert pk["standing_changes"]["causes"]
     assert all("why_here" in c for c in pk["people"])
+
+
+def test_pursuing_an_attached_part_is_answered_honestly(cfg, params):
+    """A documented (or otherwise attached) part goes to its person first; the agent says so."""
+    st = _world(cfg, params, weeks=3)
+    pl = st.player
+    for proj in st.projects.values():
+        mine = [st.roles[r] for r in proj.role_ids if st.roles[r].gender == pl.gender and not st.roles[r].cast_id
+                and st.roles[r].status == "open"]
+        if proj.stage in ("development", "prepro") and mine:
+            break
+    role = mine[0]
+    role.intended = next(p.id for p in st.actors() if p.id != pl.id and p.gender == pl.gender)
+    res = INI.adjudicate(st, cfg, {"kind": "pursue_project", "target": proj.title, "role": role.name}, 0)
+    assert "earmarked" in res["text"] and res["result"] != "accepted"
+    assert role.cast_id is None

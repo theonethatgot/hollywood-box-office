@@ -268,6 +268,7 @@ def _start_casting(st: WorldState, cfg, proj: M.Project, role: M.Role) -> None:
         return
     from . import agents
     invite = agents.build_audition_list(st, cfg, proj, role, pool, ranked, utilities)
+    invite = invite + agents.breakdown_pushes(st, cfg, proj, role, ranked, invite)
     if role.importance in ("supporting", "featured") or proj.budget < 3e6 * market.infl(cfg, year(st.date)):
         # open call: casting directors also see a few unknown / unrepresented actors
         chosen = {p.id for p in invite}

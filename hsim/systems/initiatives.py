@@ -83,7 +83,9 @@ def _ruling(item, result, text, **extra) -> dict:
     return out
 
 
-def _track(st, item, status, text, due=None, data=None) -> str:
+def _track(st, item, status, text, due=None, data=None) -> str | None:
+    if item.get("_follow_up"):                     # a watched initiative re-checking: no new record
+        return item["_follow_up"]
     iid = st.new_id("ini")
     st.initiatives[iid] = {"id": iid, "kind": item.get("kind"), "created": st.date, "status": status,
                            "approach": str(item.get("approach", ""))[:200], "steps": [{"date": st.date, "text": text}],
@@ -132,8 +134,13 @@ def project_status(st, cfg, p) -> str:
     pl = st.player
     open_roles = [st.roles[r] for r in p.role_ids if not st.roles[r].cast_id and st.roles[r].status in ("open", "auditioning")
                   and st.roles[r].gender == pl.gender]
+    earmarked = [r for r in open_roles if r.intended and r.intended not in r.tried]
+    open_roles = [r for r in open_roles if r not in earmarked]
+    if earmarked:
+        parts.append(f"{len(earmarked)} of the parts you could play are earmarked for attached actors "
+                     f"({', '.join(r.name + ' (' + r.importance + ')' for r in earmarked[:3])})")
     if not open_roles:
-        parts.append("no open roles for you")
+        parts.append("no unattached roles for you")
     for r in open_roles[:3]:
         pool = candidate_pool(st, cfg, p, r)
         if not any(x.id == pl.id for x in pool):
@@ -152,6 +159,19 @@ def room(st, cfg, proj, role, pool=None) -> dict:
     sw, rb = star_weight(cfg, proj, role, st.date), role_budget(cfg, proj, role)
     u = {x.id: casting_utility(st, cfg, proj, role, x, sw, rb) for x in pool}
     return {"u": u, "order": sorted(u, key=lambda k: (-u[k], k))}
+
+
+def estimate_rank(st, cfg, proj, role, person, sample: int = 60) -> int:
+    """An agent's read of where a client stands, from a sample of the competition (cheap, imperfect)."""
+    from .casting import candidate_pool, casting_utility, role_budget, star_weight
+    pool = [x for x in candidate_pool(st, cfg, proj, role) if x.id != person.id]
+    if not pool:
+        return 1
+    sw, rb = star_weight(cfg, proj, role, st.date), role_budget(cfg, proj, role)
+    picks = sorted(pool, key=lambda x: R.unit(st.seed, "rank-sample", role.id, x.id))[:sample]
+    mine = casting_utility(st, cfg, proj, role, person, sw, rb)
+    above = sum(1 for x in picks if casting_utility(st, cfg, proj, role, x, sw, rb) > mine)
+    return 1 + round(above * len(pool) / len(picks))
 
 
 def rank_in_pool(st, cfg, proj, role, pool, person_id=None) -> int:
@@ -181,48 +201,68 @@ def _pursue_project(st, cfg, item, g) -> dict:
         return _ruling(item, "rejected", f"'{proj.title}' is already {proj.stage.replace('_', ' ')}; the roles are cast.")
     roles = [st.roles[r] for r in proj.role_ids if not st.roles[r].cast_id and st.roles[r].status in ("open", "auditioning")
              and st.roles[r].gender == pl.gender]
-    wanted = item.get("role")
-    if wanted:
-        roles = sorted(roles, key=lambda r: (r.name.lower() != str(wanted).lower(), r.importance))
-    if not roles:
-        if proj.stage == "development":
-            iid = _track(st, item, "watching", f"{agent.name} will push for you when '{proj.title}' starts casting.",
-                         data={"project": proj.id, "agent": agent.id})
-            return _ruling(item, "pending", f"'{proj.title}' isn't casting yet; {agent.name} has it on their list "
-                                            f"and will move when it does.", initiative=iid)
-        return _ruling(item, "rejected", f"There's nothing open for you on '{proj.title}'.")
+    wanted = str(item.get("role") or "").strip().lower()
+    earmarked = [r for r in roles if r.intended and r.intended not in r.tried]   # an actor is already attached
+    roles = [r for r in roles if r not in earmarked]
+    note = ""
+    if wanted and any(r.name.lower() == wanted for r in earmarked):
+        note = f"{item.get('role')} is earmarked: the producers are going to another actor first. "
     ranked = []
     for r in roles:
         pool = candidate_pool(st, cfg, proj, r)
         if any(x.id == pl.id for x in pool):
             ranked.append((rank_in_pool(st, cfg, proj, r, pool), r))
+    fits_earmarked = [r for r in earmarked if r in proj_roles_fitting(st, cfg, proj, earmarked)]
     if not ranked:
-        return _ruling(item, "rejected", f"The open parts on '{proj.title}' don't fit your age, type or schedule.")
+        if fits_earmarked:
+            for r in fits_earmarked:
+                if pl.id not in r.requested:
+                    r.requested.append(pl.id)
+            iid = _track(st, item, "watching", f"Parts on '{proj.title}' are spoken for; {agent.name} asked to be "
+                                               f"called if one opens up.", data={"project": proj.id, "agent": agent.id})
+            return _ruling(item, "pending", note + f"Everything on '{proj.title}' that suits you is spoken for. "
+                                                   f"{agent.name} asked to be called if a part opens up.", initiative=iid)
+        if not roles and proj.stage == "development" and not earmarked:
+            iid = _track(st, item, "watching", f"{agent.name} will push for you when '{proj.title}' starts casting.",
+                         data={"project": proj.id, "agent": agent.id})
+            return _ruling(item, "pending", f"'{proj.title}' isn't casting yet; {agent.name} has it on their list "
+                                            f"and will move when it does.", initiative=iid)
+        return _ruling(item, "rejected", note + f"There's nothing open on '{proj.title}' that fits your age, type "
+                                                f"or schedule.")
     ranked.sort(key=lambda x: (x[0], x[1].id))
-    target_rank, target = next(((rk, r) for rk, r in ranked if not wanted or r.name.lower() == str(wanted).lower()),
-                               ranked[0])
+    target_rank, target = next(((rk, r) for rk, r in ranked if r.name.lower() == wanted), ranked[0])
     best_rank, best = ranked[0]
-    ok = push_succeeds(st, cfg, agent, proj, target_rank, g)
-    if ok:
+    asked = next((r for r in earmarked if r.name.lower() == wanted), None) or target
+    if push_succeeds(st, cfg, agent, proj, target_rank, g, pl):
         request(st, cfg, proj, target, pl.id)
-        iid = _track(st, item, "succeeded", f"{agent.name} got you seen for {target.name} on '{proj.title}'.",
+        result = "accepted" if asked is target else "partial"
+        iid = _track(st, item, "succeeded" if result == "accepted" else "partial",
+                     f"{agent.name} got you seen for {target.name} on '{proj.title}'.",
                      data={"project": proj.id, "role": target.id})
-        return _ruling(item, "accepted", f"{agent.name} pushed and the casting director agreed to see you for "
-                                         f"{target.name} ({target.importance}). You'll still have to win the room.",
+        return _ruling(item, result, note + f"{agent.name} pushed and the casting director agreed to see you for "
+                                            f"{target.name} ({target.importance}). You'll still have to win the room.",
                        initiative=iid)
-    if best is not target and push_succeeds(st, cfg, agent, proj, best_rank, g):
+    if best is not target and push_succeeds(st, cfg, agent, proj, best_rank, g, pl):
         request(st, cfg, proj, best, pl.id)
         iid = _track(st, item, "partial", f"Seen for {best.name} instead of {target.name} on '{proj.title}'.",
                      data={"project": proj.id, "role": best.id})
-        return _ruling(item, "partial", f"They won't see you for {target.name}, but they'll see you for "
-                                        f"{best.name} ({best.importance}).", initiative=iid)
-    from .agents import pass_reason
-    reason = pass_reason(st, cfg, proj, target, pl)
+        return _ruling(item, "partial", note + f"They won't see you for {target.name}, but they'll see you for "
+                                               f"{best.name} ({best.importance}).", initiative=iid)
+    from .agents import push_decline_reason
+    reason = push_decline_reason(st, cfg, proj, target, pl, target_rank)
     _track(st, item, "failed", f"No traction on '{proj.title}': {reason}.", data={"project": proj.id})
-    return _ruling(item, "rejected", f"{agent.name} made the call, but no: {reason}.")
+    return _ruling(item, "rejected", note + f"{agent.name} made the call, but no: {reason}.")
 
 
-def push_succeeds(st, cfg, agent, proj, rank, g) -> bool:
+def proj_roles_fitting(st, cfg, proj, roles) -> list:
+    from .casting import available, fit, window
+    pl = st.player
+    if not available(pl, *window(proj)):
+        return []
+    return [r for r in roles if fit(pl, r, st.date) > 0.3]
+
+
+def push_succeeds(st, cfg, agent, proj, rank, g, client=None) -> bool:
     """An agent's push works through relationships and credibility; it can't overcome a poor fit."""
     from ..world.people import casting_director_for
     cd = casting_director_for(st, proj)
@@ -231,6 +271,9 @@ def push_succeeds(st, cfg, agent, proj, rank, g) -> bool:
     base = 0.85 if rank <= 5 else 0.6 if rank <= 15 else 0.3 if rank <= 40 else 0.06 if rank <= 120 else 0.0
     p = base * (0.6 + agent.direction.get("hustle", 50) / 150) * {1: 1.2, 2: 1.0, 3: 0.8}.get(ag.tier if ag else 3, 0.8)
     p += (rel.affinity / 200 if rel else 0.0)
+    if client is not None and proj.director_id:      # a director who rates the client opens the door
+        dr = st.rel(proj.director_id, client.id, create=False)
+        p += max(0.0, dr.affinity) / 60 if dr else 0.0
     return g.random() < clamp(p, 0.0, 0.95)
 
 
@@ -557,7 +600,9 @@ def step(st: WorldState, cfg: dict) -> None:
             _step(st, iid, "The film moved on before anything opened up.", "failed")
         elif proj.stage == "prepro":
             g = R.stream(st.seed, "initiative-watch", iid, st.date)
-            res = _pursue_project(st, cfg, {"kind": "pursue_project", "target": proj.id}, g)
+            res = _pursue_project(st, cfg, {"kind": "pursue_project", "target": proj.id, "_follow_up": iid}, g)
+            if res["result"] == "pending":
+                continue                               # still spoken for; keep watching
             _step(st, iid, "Casting opened: " + res["text"], "succeeded" if res["result"] in ("accepted", "partial") else "failed")
             st.log("agent_push", f"'{proj.title}' started casting: {res['text']}", actors=[st.player_id], salience=3,
                    public=False, refs={"project": proj.id, "initiative": iid})

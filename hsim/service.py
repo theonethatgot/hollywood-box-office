@@ -108,7 +108,7 @@ def submit_reply(st: WorldState, cfg: dict, block: dict, force: bool = False) ->
     for i, item in enumerate(block.get("initiatives") or []):
         if not isinstance(item, dict):
             continue
-        st.rulings.append(INI.adjudicate(st, cfg, item, i))
+        st.rulings.append(INI.adjudicate(st, cfg, {"id": f"i{i + 1}", **item}, i))
     warnings = []
     for item in block.get("narrative") or []:
         w = add_narrative(st, item)

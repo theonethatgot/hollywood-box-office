@@ -129,6 +129,9 @@ def pass_reason(st, cfg, proj, role, p) -> str:
     sw = star_weight(cfg, proj, role, st.date)
     if sw > 0.8 and p.bankability < 35:
         return "they want a bigger name for this part"
+    from .casting import ask_fee, role_budget
+    if ask_fee(st, cfg, p, proj) > 1.6 * role_budget(cfg, proj, role):
+        return "the part pays well below your quote"
     if abs(age - mid) > (role.age_max - role.age_min) / 2:
         return f"they went {'younger' if age > mid else 'older'}"
     if p.range.get(role.register, 50) < 45:
@@ -288,114 +291,122 @@ def _advice(st, cfg, p) -> str:
 
 
 # ------------------------------------------------------------ agent plans ---
-# Each week every agent decides where to spend their calls. Agents are commercially
-# motivated: they push for the clients whose careers pay (quote, standing, momentum) and
-# for clients with a real angle on a specific film (they've worked with its director, or
-# the part is squarely in their proven niche). A push asks the casting director to see the
-# client; it works through the agent's credibility and relationship with that CD, and it
-# can't overcome a poor fit. A successful push only gets the client into the room.
-# The protagonist is one client among many: no rule here looks at who is the player.
+# Agents are commercially motivated and their calls are limited. Two kinds of push, for every
+# client alike (no rule here looks at who is the player):
+#  1. Breakdowns. When a part starts casting, agents whose clients just missed the casting
+#     director's list (ranked near the top but not invited) decide whether the part is worth
+#     one of this week's calls: the bigger the part and film, the better it suits the client's
+#     goals and proven niche, and the more the client earns, the likelier. A push works through
+#     the agent's credibility with that CD and can't overcome a poor fit.
+#  2. Angles. Each week agents look at films casting soon whose director already rates one of
+#     their clients (worked well together, a strong audition) and ask for that client to be seen.
+# A successful push only gets the client into the room; they still have to win it.
 SIZE_UPSIDE = {"lead": 1.0, "colead": 0.75, "supporting": 0.4, "featured": 0.12}
 
 
-def plan_week(st: WorldState, cfg: dict) -> None:
-    if st.date == st.start_date:
-        return
-    from .casting import available, fit, star_weight, window
+def _calls_left(st, agent) -> int:
+    used = st.market.setdefault("agent_calls", {})
+    if used.get("week") != st.date:
+        used.clear()
+        used["week"] = st.date
+    hustle = agent.direction.get("hustle", 50)
+    return 1 + int(hustle >= 60) + int(hustle >= 80) - used.get(agent.id, 0)
+
+
+def _use_call(st, agent) -> None:
+    used = st.market["agent_calls"]
+    used[agent.id] = used.get(agent.id, 0) + 1
+
+
+def push_value(st, cfg, c, proj, role) -> float:
+    """How much an agent wants this part for this client (0..~1.5)."""
+    from . import initiatives as INI
+    director = st.people.get(proj.director_id) if proj.director_id else None
+    infl = market.infl(cfg, year(st.date))
+    upside = SIZE_UPSIDE[role.importance] * min(1.0, math.log10(max(proj.budget / infl, 1e5) / 1e5) / 2.3)
+    upside *= 0.7 + (director.prestige if director else 30) / 200
+    earns = clamp(commission_potential(st, cfg, c) / 110, 0.3, 1.0)
+    return (upside * (0.5 + strategy_fit(st, c, proj, role)) * niche_factor(c, role.register)
+            * INI.genre_bias(c, proj.genre) * earns)
+
+
+def breakdown_pushes(st: WorldState, cfg: dict, proj: M.Project, role: M.Role, ranked: list, invited: list) -> list:
+    """Agents call about a part that just went out. Returns the actors the CD agreed to add."""
     from . import initiatives as INI
     ap = cfg["agents"]["plans"]
-    roles = []                                      # principal roles not yet casting, on films with a director
-    for pid, proj in sorted(st.projects.items()):
-        if proj.stage not in ("development", "prepro"):
+    have = {p.id for p in invited}
+    added = []
+    for rank, c in enumerate(ranked[:ap["push_window"]], 1):
+        if len(added) >= ap["room_cap"]:
+            break                                   # the CD will only add so many to a session
+        if c.id in have or not c.agent_person_id or not INI.allows(c, "film", role, proj.genre):
             continue
-        for rid in proj.role_ids:
-            r = st.roles[rid]
-            if r.importance == "featured" or r.cast_id or r.intended:
-                continue
-            if r.status == "open" or (r.status == "auditioning" and r.audition_date and r.audition_date > st.date):
-                roles.append((proj, r))
-    if not roles:
+        agent = st.people.get(c.agent_person_id)
+        if not agent or agent.death or _calls_left(st, agent) <= 0:
+            continue
+        value = push_value(st, cfg, c, proj, role)
+        want = value * (0.5 + agent.direction.get("hustle", 50) / 100)
+        if R.unit(st.seed, "push-want", role.id, c.id) >= want * ap["push_propensity"]:
+            continue
+        _use_call(st, agent)
+        if _push(st, cfg, agent, c, proj, role, False, rank):
+            added.append(c)
+    return added
+
+
+def plan_week(st: WorldState, cfg: dict) -> None:
+    """Angle pushes: films casting soon whose director already rates one of the agent's clients."""
+    if st.date == st.start_date:
         return
-    worked = {}                                     # director -> people they've built goodwill with
-    directors = {p.director_id for p, _ in roles if p.director_id}
-    for r in st.rels.values():
-        if r.affinity >= ap["connection_affinity"]:
-            if r.a in directors:
-                worked.setdefault(r.a, set()).add(r.b)
-            if r.b in directors:
-                worked.setdefault(r.b, set()).add(r.a)
-    clients = {}
-    for p in st.actors():
-        if p.agent_person_id:
-            clients.setdefault(p.agent_person_id, []).append(p)
-    log = st.market.setdefault("agent_pushes", [])
-    rooms = {}
-    for aid in sorted(clients):
-        agent = st.people.get(aid)
-        if not agent or agent.death:
+    from .casting import available, fit, window
+    from . import initiatives as INI
+    ap = cfg["agents"]["plans"]
+    soon = add_days(st.date, 7 * ap["lookahead_weeks"])
+    films = {}
+    for pid, proj in sorted(st.projects.items()):
+        if not proj.director_id or proj.stage not in ("development", "prepro"):
             continue
-        hustle = agent.direction.get("hustle", 50)
-        info = st.agencies[agent.employer].info_quality if agent.employer in st.agencies else 50
-        calls = 1 + int(hustle >= 75)
-        book = sorted(clients[aid], key=lambda c: (-commission_potential(st, cfg, c), c.id))
-        focus = {c.id for c in book[:ap["focus_clients"]]}
-        options = []
-        for c in book:
-            age = age_on(c.birth, st.date)
-            for proj, role in roles:
-                if role.gender != c.gender or not (role.age_min - 3 <= age <= role.age_max + 3):
+        if proj.stage == "development" and not (proj.prepro_start and proj.prepro_start <= soon):
+            continue
+        films.setdefault(proj.director_id, []).append(proj)
+    if not films:
+        return
+    rated = []                                      # (director, client) pairs with real goodwill
+    for r in st.rels.values():
+        if r.affinity < ap["connection_affinity"]:
+            continue
+        for d, c in ((r.a, r.b), (r.b, r.a)):
+            if d in films and c in st.people and st.people[c].agent_person_id and "actor" in st.people[c].roles:
+                rated.append((d, c, r.affinity))
+    options = []
+    for d, cid, aff in sorted(rated):
+        c = st.people[cid]
+        if not c.active or c.death:
+            continue
+        age = age_on(c.birth, st.date)
+        for proj in films[d]:
+            for rid in proj.role_ids:
+                role = st.roles[rid]
+                if role.cast_id or role.intended or role.gender != c.gender or role.status not in ("open", "auditioning"):
                     continue
-                angle = c.id in worked.get(proj.director_id, ())
-                if c.id not in focus and not angle:
+                if role.status == "auditioning" and not (role.audition_date and role.audition_date > st.date):
                     continue
-                if c.id in role.requested or c.id in role.tried or c.id in [a['id'] for a in role.auditioners] or not INI.allows(c, "film", role, proj.genre):
+                if not (role.age_min - 3 <= age <= role.age_max + 3) or c.id in role.requested or c.id in role.tried \
+                        or c.id in [a["id"] for a in role.auditioners] or not INI.allows(c, "film", role, proj.genre):
                     continue
-                f = fit(c, role, st.date)
-                if f < ap["min_fit"]:
+                if fit(c, role, st.date) < ap["min_fit"]:
                     continue
-                need = star_weight(cfg, proj, role, st.date) * 60
-                reach = clamp(1 - max(0.0, need - c.bankability) / 60, 0.05, 1.0)
-                director = st.people.get(proj.director_id) if proj.director_id else None
-                upside = (SIZE_UPSIDE[role.importance] * math.log10(max(proj.budget, 1e5) / 1e5)
-                          * (0.6 + (director.prestige if director else 30) / 100))
-                score = (upside * f * reach * (0.5 + strategy_fit(st, c, proj, role)) * INI.genre_bias(c, proj.genre)
-                         * niche_factor(c, role.register) * (1.5 if angle else 1.0))
-                options.append((score, c, proj, role, angle))
-        options.sort(key=lambda x: (-x[0], x[1].id, x[3].id))
-        # the agent's read of the room for the most attractive options: is a call worth spending?
-        judged, per_client, shortlist = [], {}, []
-        for o in options:                         # the best few options for each client, not one client's leads
-            if per_client.get(o[1].id, 0) < 3:
-                per_client[o[1].id] = per_client.get(o[1].id, 0) + 1
-                shortlist.append(o)
-        for score, c, proj, role, angle in shortlist[:ap["options_considered"]]:
-            if not available(c, *window(proj)):
-                continue
-            if role.id not in rooms:                 # computed once per role per week, only when needed
-                rooms[role.id] = INI.room(st, cfg, proj, role)
-            rm = rooms[role.id]
-            if c.id not in rm["u"]:
-                continue
-            rank = rm["order"].index(c.id) + 1
-            if rank <= cfg["agents"]["cd_known_picks"] and role.status == "open":
-                continue                          # the CD will call them in anyway
-            read = rank * math.exp(0.5 * (1 - info / 100) * R.gauss(st.seed, "agent-read", agent.id, role.id, c.id))
-            odds = 0.85 if read <= 5 else 0.6 if read <= 15 else 0.3 if read <= 40 else 0.05
-            if odds < ap["min_odds"]:
-                continue
-            judged.append((score * odds, c, proj, role, angle, rank))
-        judged.sort(key=lambda x: (-x[0], x[1].id, x[3].id))
-        used = set()
-        for value, c, proj, role, angle, rank in judged:
-            if calls <= 0:
-                break
-            if c.id in used:
-                continue
-            used.add(c.id)
-            calls -= 1
-            _push(st, cfg, agent, c, proj, role, angle, rank, log)
-    if len(log) > 400:
-        del log[:-400]
+                options.append((push_value(st, cfg, c, proj, role) * (1 + aff / 50), c, proj, role))
+    options.sort(key=lambda x: (-x[0], x[1].id, x[3].id))
+    done = set()
+    for value, c, proj, role in options:
+        agent = st.people.get(c.agent_person_id)
+        if c.id in done or not agent or agent.death or _calls_left(st, agent) <= 0 or not available(c, *window(proj)):
+            continue
+        done.add(c.id)
+        _use_call(st, agent)
+        rank = INI.estimate_rank(st, cfg, proj, role, c)
+        _push(st, cfg, agent, c, proj, role, True, rank)
 
 
 def commission_potential(st: WorldState, cfg: dict, c: M.Person) -> float:
@@ -405,14 +416,14 @@ def commission_potential(st: WorldState, cfg: dict, c: M.Person) -> float:
             + c.prestige * 0.1)
 
 
-def _push(st, cfg, agent, c, proj, role, angle, rank, log) -> None:
+def _push(st, cfg, agent, c, proj, role, angle, rank) -> bool:
     from . import initiatives as INI
     from ..world.people import casting_director_for
     g = R.stream(st.seed, "agent-push", agent.id, c.id, role.id, st.date)
-    ok = INI.push_succeeds(st, cfg, agent, proj, rank, g)
+    ok = INI.push_succeeds(st, cfg, agent, proj, rank, g, c)
     director = st.people.get(proj.director_id) if proj.director_id else None
-    why = (f"{c.name} has worked well with {director.name}" if angle
-           else f"{c.name} is one of their priority clients")
+    why = (f"{director.name} rates {c.name}" if angle and director
+           else f"{c.name} narrowly missed the casting director's list")
     rec = {"date": st.date, "agent": agent.id, "client": c.id, "project": proj.id, "role": role.id,
            "result": "agreed to see" if ok else "declined", "why": why, "rank_read": rank}
     cd_id = casting_director_for(st, proj)
@@ -423,17 +434,23 @@ def _push(st, cfg, agent, c, proj, role, angle, rank, log) -> None:
         if cd_id:                                     # pushing poor fits costs a little credibility
             r = st.rel(agent.id, cd_id)
             r.affinity = round(clamp(r.affinity - cfg["agents"]["plans"]["failed_push_cost"], -100, 60), 2)
+    log = st.market.setdefault("agent_pushes", [])
     log.append(rec)
+    if len(log) > 600:
+        del log[:-600]
     if c.controller == "player":
         cd = st.people.get(cd_id) if cd_id else None
-        because = (f"you've worked well with {director.name}" if angle else "you're one of their priority clients")
+        because = (f"{director.name} rates you" if angle and director
+                   else "you were just outside the casting director's list")
         text = (f"{agent.name} pushed for you on {role.name} ({role.importance}) in '{proj.title}' "
                 f"({st.studios[proj.studio_id].name}, {'director ' + director.name if director else 'no director yet'}) "
                 f"because {because}; "
-                + (f"{cd.name if cd else 'casting'} agreed to see you when casting opens."
-                   if ok else f"casting declined: {rec['reason']}."))
+                + ((f"{cd.name if cd else 'casting'} agreed to see you"
+                    + (" when casting opens." if role.status == "open" else ".")) if ok
+                   else f"casting declined: {rec['reason']}."))
         st.log("agent_push", text, actors=[c.id, agent.id] + ([cd.id] if cd else []),
                refs={"project": proj.id, "role": role.id}, salience=3 if ok else 2, public=False)
+    return ok
 
 
 def push_decline_reason(st, cfg, proj, role, c, rank) -> str:

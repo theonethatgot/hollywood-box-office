@@ -438,6 +438,8 @@ def _standing_changes(st, cfg, new_events) -> dict:
     causes = [f"{e['date']}: {e['text']}" for e in new_events if e["type"] in STANDING_CAUSES
               and (pl.id in e["actors"] or e["refs"].get("project") in mine)
               and not (e["type"] == "audition_result" and "won" not in e["text"])]
+    if not changes:
+        return {"now": now, "changes": [], "relevant_events": causes[-5:]}
     if any(c.startswith("momentum") for c in changes) and not causes:
         causes.append("no new work or press: momentum fades on its own between projects")
     if any(c.startswith("public profile") for c in changes) and not causes:
@@ -455,11 +457,10 @@ def _agent_plan(st, cfg, new_events) -> dict | None:
     book = sorted((c for c in st.actors() if c.agent_person_id == agent.id),
                   key=lambda c: (-commission_potential(st, cfg, c), c.id))
     rank = next((i for i, c in enumerate(book) if c.id == pl.id), len(book))
-    focus = cfg["agents"]["plans"]["focus_clients"]
-    attention = (f"you are one of {agent.name}'s priority clients (of {len(book)}); you get their calls first"
-                 if rank < focus else
-                 f"you're one of {len(book)} clients; {agent.name}'s calls go first to the clients who earn the most, "
-                 f"so pushes for you come when you have a specific angle (a director who rates you)")
+    tier = ("one of their top earners" if rank < max(3, len(book) // 10) else
+            "mid-list" if rank < len(book) // 2 else "one of their smaller clients")
+    attention = (f"{agent.name} represents {len(book)} actors and you are {tier}. Calls are limited: they push "
+                 f"when you just miss a casting director's list on a part worth it, or when a director already rates you")
     start = new_events[0]["date"] if new_events else st.date
     pushes = [x for x in st.market.get("agent_pushes", []) if x["client"] == pl.id and x["date"] >= start]
     lines = []

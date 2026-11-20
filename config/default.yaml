@@ -209,14 +209,15 @@ agents:
   submit_base: 0.9                 # agent submission propensity (scaled by hustle, fit, strategy)
   sign_newcomer_yearly: 0.30       # base chance an unrepresented actor gets signed each year
   open_call_slots: 2               # unrepresented/unknown actors seen per supporting-role audition
-  plans:                           # monthly: where each agent spends their calls (systems/agents.plan_month)
-    focus_clients: 3               # the clients whose careers pay the agent most get the calls
-    connection_affinity: 10        # any client a film's director already rates this well is pitched too
+  plans:                           # agents' pushes (systems/agents.py: breakdown_pushes, plan_week)
+    push_window: 40                # clients ranked this high but not invited are worth a call
+    push_propensity: 0.9           # scales how readily an agent spends a call (value x hustle)
+    room_cap: 3                    # a casting director adds at most this many pushed actors to a session
+    lookahead_weeks: 8             # angle pushes: films casting now or starting pre-production soon
+    connection_affinity: 10        # a director who rates a client this well is an angle
     min_fit: 0.55                  # agents don't push clients for parts they clearly don't fit
     placement_goodwill: 1.5        # agent-CD credibility gained per client cast
     failed_push_cost: 0.5          # ...and lost when they push a client the CD won't see
-    options_considered: 9          # the agent reads the room for their most attractive options
-    min_odds: 0.25                 # and doesn't spend a call on a long shot
 
 awards:
   nomination_week: 7               # ISO week of nominations announcement
