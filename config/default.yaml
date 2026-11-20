@@ -229,6 +229,7 @@ awards:
 personal:
   generated_for_real_people: [romance, breakup, engagement, marriage]   # never: illness, death, crime, scandal
   spark_base: 0.06
+  spark_cooldown_weeks: 26        # after a chemistry prompt about someone, wait this long before another
   attraction_threshold: 0.45
   dating_to_marriage_weekly: 0.0015
   min_courtship_weeks: 26

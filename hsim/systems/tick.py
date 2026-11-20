@@ -55,7 +55,8 @@ def advance(st: WorldState, cfg: dict, until: str, max_weeks: int | None = None)
         if decisions.pending(st, interrupting_only=True):
             reason = "decision required"
             break
-        hit = [e for e in st.events[mark:] if e["type"] in stop_types and st.player_id in e["actors"]]
+        hit = [e for e in st.events[mark:] if e["type"] in stop_types and st.player_id in e["actors"]
+               and e["salience"] >= 3]                  # an opening, not every later weekend of the run
         if hit:
             reason = f"significant event: {hit[0]['type']}"
             break

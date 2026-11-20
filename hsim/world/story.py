@@ -127,7 +127,8 @@ def ensure_story(st, proj) -> dict:
     proj.story = {"provenance": "simulated screenplay for a fictional production",
                   "logline": f"A {proj.tone} {proj.genre}: {proj.premise}", "central_conflict": conflict,
                   "characters": chars, "links": links, "beats": beats,
-                  "key_scenes": {r.id: [_pick(g, SCENES) for _ in range(2)] for r in roles if r.importance != "featured"}}
+                  "key_scenes": {r.id: [SCENES[int(i)] for i in g.choice(len(SCENES), 2, replace=False)]
+                                 for r in roles if r.importance != "featured"}}
     return proj.story
 
 

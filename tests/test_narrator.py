@@ -157,3 +157,14 @@ def test_personas_fit_professions(cfg, params):
         for role in ("agent", "casting_director"):
             if role in p.roles and p.persona.get("signature"):
                 assert p.persona["signature"] in SIGNATURES_BY_ROLE[role], (p.id, p.persona["signature"])
+
+
+def test_story_key_scenes_are_distinct(cfg, params):
+    from hsim.systems import tick as T
+    from hsim.world.story import ensure_story
+    st = S.genesis_state(cfg, params)
+    T.advance(st, cfg, "2100-01-01", max_weeks=2)
+    for p in list(st.projects.values())[:40]:
+        ensure_story(st, p)
+        for scenes in p.story.get("key_scenes", {}).values():
+            assert len(set(scenes)) == len(scenes)

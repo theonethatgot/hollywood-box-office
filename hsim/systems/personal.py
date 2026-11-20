@@ -17,7 +17,7 @@ import math
 
 from ..core import rng as R
 from ..core.state import WorldState
-from ..core.util import add_weeks as _add_weeks, age_on, clamp
+from ..core.util import add_days, add_weeks as _add_weeks, age_on, clamp
 from . import decisions as D
 
 TAKEN = ("dating", "married")
@@ -81,12 +81,17 @@ def _sparks(st, cfg) -> None:
             continue
         g = R.stream(st.seed, "spark", r.a, r.b, st.date)
         if a.controller == "player" or b.controller == "player":
-            npc = b if a.controller == "player" else a
+            npc, me = (b, a) if a.controller == "player" else (a, b)
+            if npc.gender not in me.romance.get("attracted_to", []):
+                continue                    # the protagonist's own orientation decides whom they feel drawn to
+            recent = add_days(st.date, -7 * pc["spark_cooldown_weeks"])
+            if any(d.kind == "romance" and d.refs.get("person") == npc.id and d.created >= recent
+                   for d in st.decisions.values()):
+                continue                    # already asked (or pending): don't re-prompt every week on set
             att = r.attraction_ba if npc.id == r.b else r.attraction_ab
-            # the player perceives signals, which are informative but imperfect
-            signal_p = pc["spark_base"] * close * (0.4 + 2.0 * att + 0.5 * npc.personality.get("openness", 50) / 100)
-            if g.random() < signal_p and not any(d.kind == "romance" and d.status == "pending" and d.refs.get("person") == npc.id
-                                                 for d in st.decisions.values()) and r.status != "ex":
+            # the player perceives signals, which are informative but imperfect (a misread is possible)
+            signal_p = pc["spark_base"] * close * (0.15 + 2.0 * att + 0.3 * npc.personality.get("openness", 50) / 100)
+            if g.random() < signal_p and r.status != "ex":
                 where = ((f"while rehearsing your scenes together on '{st.projects[proj_id].title}'" if close >= 0.8
                           else f"on the set of '{st.projects[proj_id].title}'") if proj_id in st.projects else
                          "while you were spending time together" if proj_id == "social" else

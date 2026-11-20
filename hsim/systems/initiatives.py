@@ -620,7 +620,8 @@ def _resolve_development(st, cfg, ini, g) -> None:
                   + (f" ({', '.join(interested)} would look again with a stronger package or a rewrite)." if interested else "."),
                   "turnaround")
             return
-        s = studios[int(g.integers(len(studios)))]
+        again = [x for x in studios if x.id in data.get("interested", [])]   # those who asked to see it again first
+        s = (again or studios)[int(g.integers(len(again or studios)))]
         data["pitched"].append(s.id)
         read = data["quality"] + float(g.normal(0, 12)) * (1.5 - s.exec_taste / 100)
         names = [st.people[x] for x in data.get("attached", []) if x in st.people]

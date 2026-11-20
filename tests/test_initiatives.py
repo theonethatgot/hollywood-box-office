@@ -245,3 +245,28 @@ def test_development_package_follow_ups(cfg, params):
         r = INI.adjudicate(st, cfg, {"kind": "develop_project", "project": iid, "action": "attach", "target": d.name}, 3)
         assert r["result"] in ("accepted", "rejected")
         assert (d.id in ini["data"]["attached"]) == (r["result"] == "accepted")
+
+
+def test_chemistry_respects_orientation_and_does_not_repeat(cfg, params):
+    st = S.genesis_state(cfg, {**params, "player": {**params["player"], "attracted_to": ["m"]}})
+    st.orders.update(DELEGATE_ALL)
+    T.advance(st, cfg, "2100-01-01", max_weeks=60)
+    prompts = [d for d in st.decisions.values() if d.kind == "romance"]
+    assert all(st.people[d.refs["person"]].gender == "m" for d in prompts)
+    by_person = {}
+    for d in sorted(prompts, key=lambda d: d.created):
+        last = by_person.get(d.refs["person"])
+        assert last is None or (dt.date.fromisoformat(d.created) - dt.date.fromisoformat(last)).days >= 7 * 26
+        by_person[d.refs["person"]] = d.created
+
+
+def test_premiere_interrupt_stops_on_opening_not_every_weekend(cfg, params, monkeypatch):
+    st = _world(cfg, params, weeks=1)
+    st.orders["interrupt_on"] = ["premieres"]
+    real = T.tick
+    def tick(s, c):
+        real(s, c)
+        s.log("player_film_gross", "'X' took in week 3 with $1M this week.", actors=[s.player_id], salience=2)
+    monkeypatch.setattr(T, "tick", tick)
+    r = T.advance(st, cfg, add_days(st.date, 28))
+    assert r["weeks"] == 4 or r["stopped"] == "decision required"
