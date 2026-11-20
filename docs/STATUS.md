@@ -187,6 +187,19 @@ stay in `continuity`; people with history come before small-part co-stars on the
 | Profitable films | 41% | Plausible; not yet validated against studio financials |
 | Profitable, quality < 45 vs ≥ 65 | 27% vs 66% | Quality matters without guaranteeing success ✓ |
 
+**Re-run, this pass (historical seeds 1–2 × 2 years), same seeds before and after the pass:**
+| Metric | Before (e43fa75) | After | Note |
+|---|---|---|---|
+| Admissions 1980 / 1981 | 946–978M / 1.11–1.14B | same | ref ~1.02 / 1.07B |
+| Releases per world-year | 244 | 244 | |
+| Domestic p50 / p90 / p99 | $5.3M / $29.8M / $92.6M | $5.2M / $29.2M / $90.2M | |
+| Yearly #1 median / max | $120M / $166M | $120M / $171M | |
+| Hill tail index (top 5%) | 2.61 | 2.47 | **thinner than the < 2 target** |
+| Profitable share; quality ≥ 65 profitable | 43.8%; 88% | 43.8%; 89% | |
+
+The pass does not move the market. The table above predates the pack's exclusion of TV, adult and cast-less
+films, and the current pack's tail is thinner than it reported (α ≈ 2.5 vs 1.86): an open calibration issue.
+
 Fictional-only worlds (no pack) remain available. Their tail is thinner (α ≈ 2.7),
 because real films bring wider spreads of budget, marketability and star power.
 
@@ -197,15 +210,17 @@ Moore is effectively missing because his Bond films are British productions.
 Six of ten anchors are in the top 50 of 3,595 real actors.
 
 ## Open issues (next)
-1. **Coverage:** include UK/US co-productions and US-distributed foreign films (Bond, *Superman*...).
-2. **Estimator:** use recorded box office more strongly where present; Tier A personality extraction from biographies (with citations).
-3. **Deaths during a shoot:** roles reopen for films not yet shooting; a death mid-shoot isn't handled yet.
-4. **Profitability** against era studio financials; per-era ancillary.
-5. Deeper NPC goals (NPCs don't yet originate initiatives like develop_project), awards season detail,
+1. **Calibration:** the current historical pack's box-office tail is thinner than the literature (Hill α ≈ 2.5
+   on seeds 1–2, target < 2) and the yearly #1 is low (~$120M vs ~$181–212M). Re-tune after coverage (item 2).
+2. **Coverage:** include UK/US co-productions and US-distributed foreign films (Bond, *Superman*...).
+3. **Estimator:** use recorded box office more strongly where present; Tier A personality extraction from biographies (with citations).
+4. **Deaths during a shoot:** roles reopen for films not yet shooting; a death mid-shoot isn't handled yet.
+5. **Profitability** against era studio financials; per-era ancillary.
+6. Deeper NPC goals (NPCs don't yet originate initiatives like develop_project), awards season detail,
    then Phases 3–6 (DESIGN.md §11).
-6. Generated fictional names can collide with real people (a fictional director named "Charlie Kaufman"
+7. Generated fictional names can collide with real people (a fictional director named "Charlie Kaufman"
    appeared); filter generated names against the real-person index.
-7. Packages: only one attachment affects a studio's read; financing, producers and turnaround deals
+8. Packages: only one attachment affects a studio's read; financing, producers and turnaround deals
    are not modelled.
 
 ## Data and licensing
