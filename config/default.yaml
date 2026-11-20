@@ -266,7 +266,7 @@ history:                            # historical snapshot loader (hsim/world/his
   intended_role_bonus: 0.6        # an actor's documented pull toward a project they historically made
   attached_offer_bankability: 35  # documented actors at least this much of a draw get the part offered directly;
                                   # below it the part is auditioned, the documented actor favoured
-  documented_audition_bonus: 8    # their edge in that room (the documented casting usually holds, not always)
+  documented_choice_bonus: 40     # the documented decision-makers' preference in the final pick (usually holds, not always)
 
 advance:
   max_weeks_per_call: 520

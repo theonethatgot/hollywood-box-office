@@ -83,25 +83,35 @@ def build_audition_list(st: WorldState, cfg: dict, proj: M.Project, role: M.Role
     rb = role_budget(cfg, proj, role)
     known = ranked[:ac["cd_known_picks"]]
     known_ids = {p.id for p in known}
+    in_ranked = {p.id for p in ranked}
     req = [p for p in ranked if p.id in role.requested and p.id not in known_ids]   # agreed after an agent's push
+    req += [p for p in pool if p.id in role.requested and p.id not in known_ids and p.id not in in_ranked]
     known_ids |= {p.id for p in req}
     submitted = []
-    for p in pool:
+    from .casting import casting_utility, fit, star_weight
+    for p in pool:                                  # agents submit from everyone plausible, not just the long list
         if p.id in known_ids or not p.agent_id:
             continue
-        from .casting import fit
         f = fit(p, role, st.date)
         hustle = agent_hustle(st, p) / 100
+        u = R.unit(st.seed, "submit", role.id, p.id)
+        base = ac["submit_base"] * (0.4 + hustle) * max(0.0, f - 0.35) * 2.2
+        if u >= base * 1.5 * 1.5 * 1.4:             # can't pass whatever the strategy terms are (exact shortcut)
+            continue
         strat = strategy_fit(st, p, proj, role)
         if not allows(p, "film", role, proj.genre):
             continue
-        prob = (ac["submit_base"] * (0.4 + hustle) * max(0.0, f - 0.35) * 2.2 * (0.5 + strat) * niche_factor(p, role.register)
-                * genre_bias(p, proj.genre))
-        if R.unit(st.seed, "submit", role.id, p.id) < prob:
+        prob = base * (0.5 + strat) * niche_factor(p, role.register) * genre_bias(p, proj.genre)
+        if u < prob:
             if ask_fee(st, cfg, p, proj) > 2.0 * rb and strat < 0.55:
                 continue                                # agents don't shop a client far below their quote
             submitted.append(p)
     # CD screening: same observed utility, plus what this CD remembers about the actor
+    sw = star_weight(cfg, proj, role, st.date)
+    for p in submitted + req:
+        if p.id not in utilities:
+            utilities[p.id] = casting_utility(st, cfg, proj, role, p, sw, rb)
+
     def screen(p):
         rel = st.rel(cd_id, p.id, create=False) if cd_id else None
         return utilities[p.id] + (rel.affinity / 4 if rel else 0.0) + 6 * R.gauss(st.seed, "screen", role.id, p.id)

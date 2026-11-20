@@ -104,3 +104,10 @@ ancillary_ratio:       # home video, pay-TV and TV sales relative to domestic gr
   1985: 0.65
   1990: 0.95
   1995: 1.05
+
+audience_scale:        # per-film audience calibration (fitted to admissions_m by tools/batch.py); 1.0 = the 1980 fit
+  1975: 1.0
+  1984: 1.0
+  1990: 0.52
+  1992: 0.47
+  1995: 0.47

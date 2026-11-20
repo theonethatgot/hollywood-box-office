@@ -40,6 +40,13 @@ def _star_mult(st, p) -> float:
     return 1 + sum(w * a.fame * (a.appeal - 0.3) * 1.5 for a, w in _stars(st, p))
 
 
+def audience_scale(cfg, date) -> float:
+    """Era calibration of per-film audience: from the mid-1980s many more films competed for a
+    moviegoing audience that grew far less (about 230 releases in 1980, about 410 in 1990)."""
+    t = cfg.get("eras", {}).get("audience_scale")
+    return era_value(cfg, "audience_scale", year(date)) if t else 1.0
+
+
 def _segments(cfg, date) -> dict:
     pop = market.moviegoing_pop_m(cfg, date)
     return {s: share * pop for s, share in cfg["box_office"]["segments"].items()}
@@ -52,6 +59,9 @@ def _initial_screens(st, cfg, p) -> int:
     s = bo["base_screens"] + bo["screens_per_budget_m"] * real_m
     if st.studios[p.studio_id].tier == "mini":
         s *= 0.75
+    if p.historical_ref and p.distributor_note == "distributor not documented":
+        # real films with no documented distributor were mostly limited, regional or token releases
+        return int(max(20, min(s, 30 + 5 * max(0.0, p.hook - 35))))
     return int(max(150, min(mx * 0.8, s)))
 
 
@@ -60,9 +70,10 @@ def init_run(st: WorldState, cfg: dict, p) -> None:
     aware = _awareness0(st, cfg, p)
     sm = _star_mult(st, p)
     shock = p.reception_shock or 0.0
+    scale = audience_scale(cfg, st.date)
     segs = {}
     for s, pop in _segments(cfg, st.date).items():
-        ap = p.breadth * p.segment_tilt.get(s, 1.0) * sm * math.exp(0.5 * shock)
+        ap = p.breadth * p.segment_tilt.get(s, 1.0) * sm * math.exp(0.5 * shock) * scale
         if s.startswith("adult"):
             ap *= 0.75 + 0.5 * (p.critic_score or 50) / 100
         ap = min(ap, 0.95)
@@ -108,7 +119,8 @@ def _expected_interest(st, cfg, q) -> float:
         return 0.0
     aware = _awareness0(st, cfg, q)
     sm = _star_mult(st, q)
-    return sum(pop * aware * min(0.95, q.breadth * q.segment_tilt.get(s, 1.0) * sm)
+    scale = audience_scale(cfg, q.release_date or st.date)
+    return sum(pop * aware * min(0.95, q.breadth * q.segment_tilt.get(s, 1.0) * sm * scale)
                for s, pop in _segments(cfg, q.release_date or st.date).items())
 
 

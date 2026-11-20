@@ -97,8 +97,10 @@ def test_documented_part_for_a_non_star_is_auditioned_with_the_documented_actor_
     proj.stage = "prepro"
     C._start_casting(st, CFG, proj, role)
     assert role.status == "auditioning" and "wd:QB" in [a["id"] for a in role.auditioners]
-    assert C.audition_score(st, CFG, proj, role, st.people["wd:QB"], 0) > \
-        C.audition_score(st, CFG, proj, copy.copy(role).__class__(**{**role.__dict__, "intended": None}), st.people["wd:QB"], 0)
+    st.date = role.audition_date
+    C._hold_auditions(st, CFG, proj, role)                 # the documented choice usually holds
+    assert any(o.role_id == role.id and o.person_id == "wd:QB" for o in st.offers.values())
+    st.date = "1990-01-05"
     star_role = next(st.roles[r] for r in proj.role_ids if st.roles[r].intended == "wd:QD")
     st.people["wd:QD"].bankability = 80.0
     C._start_casting(st, CFG, proj, star_role)

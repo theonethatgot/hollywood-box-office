@@ -302,7 +302,7 @@ def _start_casting(st: WorldState, cfg, proj: M.Project, role: M.Role) -> None:
         make_offer(st, cfg, proj, role, top, path="direct offer")
         return
     from . import agents
-    invite = agents.build_audition_list(st, cfg, proj, role, pool, ranked, utilities)
+    invite = agents.build_audition_list(st, cfg, proj, role, full_pool, ranked, utilities)
     invite = invite + agents.breakdown_pushes(st, cfg, proj, role, ranked, invite)
     if role.importance in ("supporting", "featured") or proj.budget < 3e6 * market.infl(cfg, year(st.date)):
         # open call: casting directors also see a few unknown / unrepresented actors
@@ -368,9 +368,8 @@ def _audition_choice(st, cfg, dec, choice, params) -> str:
 def audition_score(st, cfg, proj, role, p: M.Person, prep: float) -> float:
     g = R.stream(st.seed, "audition", role.id, p.id)
     form = g.normal(0, cfg["casting"]["audition_day_sd"]) * (1.2 - p.personality.get("discipline", 50) / 250)
-    documented = cfg["history"]["documented_audition_bonus"] if role.intended == p.id else 0.0
     return (0.45 * p.talent + 0.25 * p.craft + 0.20 * p.range.get(role.register, 40) + 0.10 * p.presence
-            + 12 * (fit(p, role, st.date) - 0.6) + prep + (p.energy - 70) / 10 + form + documented)
+            + 12 * (fit(p, role, st.date) - 0.6) + prep + (p.energy - 70) / 10 + form)
 
 
 def _tv_feedback(p: M.Person, winner: M.Person) -> str:
@@ -410,7 +409,9 @@ def _hold_auditions(st, cfg, proj, role) -> None:
     for a in present:
         p = st.people[a["id"]]
         sc = audition_score(st, cfg, proj, role, p, a["prep"])
-        studio_view = sc + sw * p.bankability * 0.25 + agency_visibility(st, p) * 0.3
+        # the documented choice: the people who really made this film picked this actor (a strong prior)
+        documented = cfg["history"]["documented_choice_bonus"] if role.intended == p.id else 0.0
+        studio_view = sc + sw * p.bankability * 0.25 + agency_visibility(st, p) * 0.3 + documented
         scored.append((studio_view, sc, p))
     scored.sort(key=lambda x: (-x[0], x[2].id))
     for rank, (_, sc, p) in enumerate(scored):

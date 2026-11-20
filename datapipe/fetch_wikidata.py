@@ -149,6 +149,9 @@ BULK = {   # name: (subject variable, query template, chunk size)
     "filmitems": ("f", """SELECT ?f ?prop ?v WHERE {{ VALUES ?f {{ {values} }}
   VALUES ?prop {{ wdt:P136 wdt:P750 wdt:P272 wdt:P155 wdt:P179 wdt:P57 wdt:P161 }}
   ?f ?prop ?v. FILTER(ISIRI(?v)) }}""", 300),
+    "voices": ("f", """SELECT ?f ?prop ?v WHERE {{ VALUES ?f {{ {values} }}
+  VALUES ?prop {{ wdt:P725 }}
+  ?f ?prop ?v. FILTER(ISIRI(?v)) }}""", 300),
     "filmmeta": ("f", """SELECT ?f ?label ?desc ?sl (MAX(?cost) AS ?costUsd) (MAX(?bo) AS ?boUsd) WHERE {{
   VALUES ?f {{ {values} }}
   OPTIONAL {{ ?f rdfs:label ?label FILTER(LANG(?label) = "en") }}
@@ -290,11 +293,11 @@ class Ingest:
 
     def people_of(self, films) -> tuple:
         fs, cast, refs = set(films), set(), set()
-        for r in self.store.rows("filmitems"):
+        for r in self.store.rows("filmitems") + self.store.rows("voices"):
             if q(r["f"]) not in fs:
                 continue
             prop, v = r["prop"].rsplit("/", 1)[1], q(r["v"])
-            (cast if prop in ("P161", "P57") else refs).add(v)
+            (cast if prop in ("P161", "P57", "P725") else refs).add(v)
         return sorted(cast), sorted(refs)
 
 
@@ -310,7 +313,7 @@ def run(y0: int, y1: int, statement_order: bool, workers: int, min_interval: flo
     films = ing.film_list(y0, y1, relist=relist)
     ids = sorted(films)
     print(f"films {y0}-{y1}: {len(ids)}", flush=True)
-    for name in ("filmitems", "filmmeta", "filmdates", "castroles"):
+    for name in ("filmitems", "voices", "filmmeta", "filmdates", "castroles"):
         ing.bulk(name, ids)
     people, refs = ing.people_of(ids)
     print(f"people: {len(people)}; referenced items: {len(refs)}", flush=True)

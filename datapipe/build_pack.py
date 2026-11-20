@@ -147,6 +147,9 @@ def build(y0: int, y1: int) -> dict:
         name = r.get("charName") or r.get("charLabel")
         if name and not name.startswith("Q"):
             chars.setdefault(qid(r["f"]), {})[qid(r["p"])] = name
+    voices = {}                                   # animated films list their cast as voice actors (P725)
+    for r in rows("voices"):
+        voices.setdefault(qid(r["f"]), []).append(qid(r["v"]))
     films = {}
     unordered = set()
     for ent in _film_entities(store, y0, y1, rows):
@@ -160,7 +163,9 @@ def build(y0: int, y1: int) -> dict:
             "title": title, "date": date, "date_precision": _precision(ent, "P577"),
             "characters": chars.get(ent["id"], {}),
             "genres": [labels.get(g, g) for g in _ids(ent, "P136")][:5],
-            "cast": _ids(ent, "P161")[:40 if ent["id"] in unordered else 12], "directors": _ids(ent, "P57")[:3],
+            "cast": (_ids(ent, "P161") + [v for v in sorted(set(voices.get(ent["id"], []))) if v not in _ids(ent, "P161")])
+                    [:40 if ent["id"] in unordered or not _ids(ent, "P161") else 12],
+            "directors": _ids(ent, "P57")[:3],
             "distributors": [labels.get(x, x) for x in _ids(ent, "P750")][:3],
             "companies": [labels.get(x, x) for x in _ids(ent, "P272")][:3],
             "cost_usd": _usd(ent, "P2130"), "box_office_usd": _usd(ent, "P2142"),
@@ -172,7 +177,7 @@ def build(y0: int, y1: int) -> dict:
     by_date = sorted(films.items(), key=lambda kv: kv[1]["date"])
     prior = {}
     for fid, fm in by_date:
-        if fid in unordered:
+        if fid in unordered or not any(c for c in fm["cast"] if c not in voices.get(fid, [])):
             fm["cast"] = sorted(fm["cast"], key=lambda p: (-prior.get(p, 0), p))[:12]
             fm["cast_order"] = "prior-credits heuristic"
         for p in fm["cast"]:
@@ -241,6 +246,9 @@ def main():
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     pack = build(a.from_year, a.to_year)
+    import hashlib                                 # the version names the content, not just the build date
+    digest = hashlib.sha256(json.dumps({k: pack[k] for k in ("films", "people")}, sort_keys=True).encode()).hexdigest()[:8]
+    pack["version"] = f"{pack['version']}-{digest}"
     out = Path(a.out or ROOT / "data" / "history" / f"wikidata_{a.from_year}_{a.to_year}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(pack, separators=(",", ":"), sort_keys=True))

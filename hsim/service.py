@@ -315,9 +315,16 @@ class Game:
     def replay_check(self) -> dict:
         st = self.replayed_state()
         base = self.save.get_meta("replay_base")
-        return {"replayed_hash": st.state_hash(), "saved_hash": self.state.state_hash(),
-                "match": st.state_hash() == self.state.state_hash(), "commands": self.save.commands_count(),
-                "replayed_from": f"checkpoint {base['date']}" if base else "genesis"}
+        out = {"replayed_hash": st.state_hash(), "saved_hash": self.state.state_hash(),
+               "match": st.state_hash() == self.state.state_hash(), "commands": self.save.commands_count(),
+               "replayed_from": f"checkpoint {base['date']}" if base else "genesis"}
+        mine, now = self.state.market.get("history", {}), st.market.get("history", {})
+        if mine and (mine.get("version"), mine.get("overlay")) != (now.get("version"), now.get("overlay")):
+            out["history_sources_changed"] = {"save": [mine.get("version"), mine.get("overlay")],
+                                              "now": [now.get("version"), now.get("overlay")]}
+            out["note"] = ("The historical pack or local IMDb overlay is not the one this save was made with; "
+                           "replay needs the original files (keep data/local/ and the pack unchanged during a campaign).")
+        return out
 
     def close(self):
         self.save.close()

@@ -331,10 +331,11 @@ def make_person(st, cfg, pid, rec, cr, dr, films, pct, as_of, now, tier_a=False,
     hw = hc["hindsight_weight"]
     if "actor" in roles:
         z_h = ND.inv_cdf(min(0.999, max(0.001, pct("hind", pid, m["hind"]))))
-        z_p = ND.inv_cdf(min(0.999, max(0.001, pct("pre", pid, m["pre"]))))
+        # no record before the start means unknown, not untalented: neutral rather than bottom-percentile
+        z_p = ND.inv_cdf(min(0.999, max(0.001, pct("pre", pid, m["pre"])))) if e["n_pre"] else 0.0
         signal = 0.6 * (hw * z_h + (1 - hw) * z_p)
         p.talent = round(clamp(50 + 14 * signal + hc["talent_noise_sd"] * g.normal(), 5, 98), 2)
-        z_l = ND.inv_cdf(min(0.999, max(0.001, pct("lead", pid, m["lead"]))))
+        z_l = ND.inv_cdf(min(0.999, max(0.001, pct("lead", pid, m["lead"])))) if e["n_pre"] else 0.0
         p.presence = round(clamp(50 + 14 * 0.5 * z_l + 12 * g.normal(), 5, 98), 2)
         yrs_active = days_between(e["first"], as_of) / 365 if e["first"] else 0
         p.craft = round(clamp(15 + 0.25 * p.talent + min(30, yrs_active) * 1.3 + min(20, e["n_pre"]) * 0.5
