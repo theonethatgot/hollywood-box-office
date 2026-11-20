@@ -227,8 +227,7 @@ def _pursue_project(st, cfg, item, g) -> dict:
                          data={"project": proj.id, "agent": agent.id})
             return _ruling(item, "pending", f"'{proj.title}' isn't casting yet; {agent.name} has it on their list "
                                             f"and will move when it does.", initiative=iid)
-        return _ruling(item, "rejected", note + f"There's nothing open on '{proj.title}' that fits your age, type "
-                                                f"or schedule.")
+        return _ruling(item, "rejected", note + why_not(st, cfg, proj, roles or earmarked, pl))
     ranked.sort(key=lambda x: (x[0], x[1].id))
     target_rank, target = next(((rk, r) for rk, r in ranked if r.name.lower() == wanted), ranked[0])
     best_rank, best = ranked[0]
@@ -252,6 +251,27 @@ def _pursue_project(st, cfg, item, g) -> dict:
     reason = push_decline_reason(st, cfg, proj, target, pl, target_rank)
     _track(st, item, "failed", f"No traction on '{proj.title}': {reason}.", data={"project": proj.id})
     return _ruling(item, "rejected", note + f"{agent.name} made the call, but no: {reason}.")
+
+
+def why_not(st, cfg, proj, roles, p) -> str:
+    """The concrete reason none of a film's parts can go to this actor."""
+    from .casting import fit, window
+    start, end = window(proj)
+    clash = [c for c in p.calendar if c["start"] <= end and start <= c["end"] and c["project_id"] != proj.id]
+    if clash:
+        c = clash[0]
+        what = st.projects[c["project_id"]].title if c["project_id"] in st.projects else "another job"
+        return (f"The dates don't work: '{proj.title}' shoots {proj.shoot_start} to {proj.shoot_end}, and you're "
+                f"committed to '{what}' until {c['end']}.")
+    if not roles:
+        return f"There are no parts on '{proj.title}' for you to play."
+    age = age_on(p.birth, st.date)
+    r = roles[0]
+    if not (r.age_min - 6 <= age <= r.age_max + 6):
+        return f"{r.name} is written {r.age_min}-{r.age_max}; at {age} you're outside what they'll consider."
+    if fit(p, r, st.date) <= 0.3:
+        return f"They don't see you as {r.name}: it's a {r.register} part outside what you're known for."
+    return f"Nothing on '{proj.title}' is open to you right now."
 
 
 def proj_roles_fitting(st, cfg, proj, roles) -> list:
@@ -327,7 +347,7 @@ def _resolve_meet(st, cfg, ini, g) -> None:
         r.affinity = round(clamp(r.affinity + delta, -100, 100), 2)
         r.contact_weeks += 1
         what = ini["data"].get("purpose") or "a general meeting"
-        r.history.append({"date": st.date, "text": f"met with you ({what})", "delta": delta})
+        r.history.append({"date": st.date, "text": f"a meeting: {what}", "delta": delta})
         st.market.setdefault("contacts", []).append([r.a, r.b, "meeting", 0.5])
         _step(st, ini["id"], f"Met {target.name}.", "succeeded")
         st.log("meeting", f"You met with {target.name} ({what}).", actors=[pl.id, target.id], salience=3, public=False,
@@ -492,6 +512,8 @@ def _develop_project(st, cfg, item, g) -> dict:
     who decide on their own read of the script, your standing and their slate."""
     pl = st.player
     details = dict(item.get("details") or {})
+    if item.get("project") or item.get("action"):
+        return _develop_follow_up(st, cfg, item, g)
     logline = str(item.get("logline") or details.get("logline") or item.get("approach") or "").strip()
     genre = str(item.get("genre") or details.get("genre") or "drama")
     from .. import models as M
@@ -504,24 +526,83 @@ def _develop_project(st, cfg, item, g) -> dict:
     if pl.cash < fee:
         return _ruling(item, "rejected", f"Hiring a screenwriter would cost about {money(fee)}; you have {money(pl.cash)}.")
     pl.cash -= fee
+    details["fee"] = fee
     skill = clamp(float(g.normal(50, 13)), 10, 95)
     weeks = int(g.integers(8, 17))
     due = add_days(st.date, 7 * weeks)
     writer = f"{['Paul', 'Ellen', 'Marty', 'Sandra', 'Jules', 'Nina'][int(g.integers(6))]} {['Kessler', 'Ruiz', 'Hale', 'Brandt', 'Okafor', 'Lindqvist'][int(g.integers(6))]}"
     iid = _track(st, item, "writing", f"Hired screenwriter {writer} ({money(fee)}); first draft due about {due}.", due=due,
                  data={"logline": logline, "genre": genre, "writer": writer, "skill": round(skill, 2),
-                       "title": str(item.get("title") or details.get("title") or "Untitled project"), "pitched": []})
+                       "title": str(item.get("title") or details.get("title") or "Untitled project"), "pitched": [],
+                       "interested": [], "attached": [], "fee": fee})
     st.log("development", f"You hired {writer} to write '{st.initiatives[iid]['data']['title']}' ({money(fee)}).",
            actors=[pl.id], salience=3, public=False, refs={"initiative": iid})
     return _ruling(item, "pending", f"{writer} is writing it; expect a draft around {due}. Then your agent can pitch it.",
                    initiative=iid)
 
 
+def _develop_follow_up(st, cfg, item, g) -> dict:
+    """Build the package: attach a director or actor, or commission a rewrite. Interested studios
+    then read it again."""
+    pl = st.player
+    ref = str(item.get("project") or "")
+    ini = st.initiatives.get(ref) or next((x for x in st.initiatives.values() if x["kind"] == "develop_project"
+                                           and x["data"].get("title", "").lower() == ref.lower()), None)
+    if not ini or ini["kind"] != "develop_project":
+        return _ruling(item, "rejected", f"No project in development matches '{ref}' (use its initiative id or title).")
+    data, action = ini["data"], item.get("action")
+    if ini["status"] in ("greenlit", "writing"):
+        return _ruling(item, "rejected", f"'{data['title']}' is {ini['status']}; there's nothing to change right now.")
+    if action == "revise":
+        fee = round(data.get("fee", 15000 * market.infl(cfg, year(st.date))) * 0.5, -2)
+        if pl.cash < fee:
+            return _ruling(item, "rejected", f"A rewrite would cost about {money(fee)}; you have {money(pl.cash)}.")
+        pl.cash -= fee
+        data["quality"] = round(clamp(data["quality"] + float(g.normal(4, 6)), 5, 95), 2)
+        ini["status"], ini["due"] = "writing", add_days(st.date, 7 * int(g.integers(5, 10)))
+        data["rewrite"] = True
+        _step(st, ini["id"], f"Commissioned a rewrite from {data['writer']} ({money(fee)}); due about {ini['due']}.")
+        return _ruling(item, "pending", f"{data['writer']} is rewriting '{data['title']}' ({money(fee)}).", initiative=ini["id"])
+    if action != "attach":
+        return _ruling(item, "rejected", "develop_project follow-ups: action attach (with target) or revise.")
+    person, err = resolve(st, item.get("target"), "person")
+    if err:
+        return _ruling(item, "rejected", err)
+    if person.id in data["attached"]:
+        return _ruling(item, "rejected", f"{person.name} is already attached.")
+    if not ({"actor", "director"} & set(person.roles)):
+        return _ruling(item, "rejected", f"{person.name} isn't an actor or director.")
+    # they read the script and decide for themselves: the read, their standing versus yours, how busy they are
+    read = data["quality"] + float(g.normal(0, 10))
+    r = st.rel(pl.id, person.id, create=False)
+    busy = sum(1 for c in person.calendar if c["end"] >= st.date)
+    want = (read - 50) / 25 + (r.affinity / 30 if r else 0) - max(0.0, person.prestige - pl.prestige) / 30 \
+        - max(0.0, person.fame - pl.fame) * 3 - 0.5 * busy + (person.goals.get("art", 0.2) - 0.2) * 2
+    if want > float(g.normal(0.4, 0.5)):
+        data["attached"].append(person.id)
+        data["pitched"] = [x for x in data["pitched"] if x not in data["interested"]]   # interested studios re-read
+        ini["status"], ini["due"] = "pitching", add_days(st.date, 14)
+        _step(st, ini["id"], f"{person.name} read '{data['title']}' and agreed to attach.")
+        st.log("development", f"{person.name} agreed to attach to '{data['title']}'.", actors=[pl.id, person.id],
+               salience=3, public=False, refs={"initiative": ini["id"]})
+        return _ruling(item, "accepted", f"{person.name} read it and said yes. Your agent will take the package back "
+                                         f"to the studios that were interested.", initiative=ini["id"])
+    why = ("the script didn't grab them" if read < 50 else "they're committed elsewhere" if busy
+           else "they want to see more traction first")
+    _step(st, ini["id"], f"{person.name} passed on attaching ({why}).")
+    return _ruling(item, "rejected", f"{person.name} passed: {why}.", initiative=ini["id"])
+
+
 def _resolve_development(st, cfg, ini, g) -> None:
     pl = st.player
     data = ini["data"]
     if ini["status"] == "writing":
-        quality = clamp(data["skill"] + float(g.normal(0, 10)), 5, 95)
+        if data.get("rewrite"):
+            quality = data["quality"]
+            data["rewrite"] = False
+            data["pitched"] = [x for x in data["pitched"] if x not in data["interested"]]
+        else:
+            quality = clamp(data["skill"] + float(g.normal(0, 10)), 5, 95)
         data["quality"] = round(quality, 2)                    # hidden: never shown
         read = ("you love it" if quality + float(g.normal(0, 8)) > 62 else "it's promising but uneven"
                 if quality > 45 else "honestly, it isn't there yet")
@@ -534,12 +615,18 @@ def _resolve_development(st, cfg, ini, g) -> None:
         studios = [s for s in sorted(st.studios.values(), key=lambda s: s.id) if s.slate_per_year > 0
                    and s.id not in data["pitched"]]
         if not studios:
-            _step(st, ini["id"], "Every studio has passed; the project is in turnaround.", "turnaround")
+            interested = [st.studios[x].name for x in data.get("interested", [])]
+            _step(st, ini["id"], "Every studio has passed; the project is in turnaround"
+                  + (f" ({', '.join(interested)} would look again with a stronger package or a rewrite)." if interested else "."),
+                  "turnaround")
             return
         s = studios[int(g.integers(len(studios)))]
         data["pitched"].append(s.id)
         read = data["quality"] + float(g.normal(0, 12)) * (1.5 - s.exec_taste / 100)
-        appeal = (read * 0.55 + pl.bankability * 0.35 + s.genre_weights.get(data["genre"], 1.0) * 10
+        names = [st.people[x] for x in data.get("attached", []) if x in st.people]
+        package = max([pl.bankability] + [x.bankability for x in names if "actor" in x.roles])
+        package += max([0.0] + [x.prestige for x in names if "director" in x.roles]) * 0.25
+        appeal = (read * 0.55 + package * 0.35 + s.genre_weights.get(data["genre"], 1.0) * 10
                   + (s.risk_appetite - 50) * 0.2)
         if appeal >= 62:
             proj = _greenlight_development(st, cfg, ini, s, g)
@@ -547,6 +634,8 @@ def _resolve_development(st, cfg, ini, g) -> None:
             st.log("development", f"{s.name} greenlit '{proj.title}', developed by you.", actors=[pl.id], salience=4,
                    public=True, refs={"project": proj.id, "initiative": ini["id"]})
         elif appeal >= 52:
+            if s.id not in data.setdefault("interested", []):
+                data["interested"].append(s.id)
             _step(st, ini["id"], f"{s.name} liked it but wants changes or a bigger name attached; still pitching.")
             ini["due"] = add_days(st.date, 21)
         else:

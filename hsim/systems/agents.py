@@ -79,6 +79,8 @@ def build_audition_list(st: WorldState, cfg: dict, proj: M.Project, role: M.Role
     from ..world.people import casting_director_for
     ac = cfg["agents"]
     cd_id = casting_director_for(st, proj)
+    from .casting import ask_fee, role_budget
+    rb = role_budget(cfg, proj, role)
     known = ranked[:ac["cd_known_picks"]]
     known_ids = {p.id for p in known}
     req = [p for p in ranked if p.id in role.requested and p.id not in known_ids]   # agreed after an agent's push
@@ -96,6 +98,8 @@ def build_audition_list(st: WorldState, cfg: dict, proj: M.Project, role: M.Role
         prob = (ac["submit_base"] * (0.4 + hustle) * max(0.0, f - 0.35) * 2.2 * (0.5 + strat) * niche_factor(p, role.register)
                 * genre_bias(p, proj.genre))
         if R.unit(st.seed, "submit", role.id, p.id) < prob:
+            if ask_fee(st, cfg, p, proj) > 2.0 * rb and strat < 0.55:
+                continue                                # agents don't shop a client far below their quote
             submitted.append(p)
     # CD screening: same observed utility, plus what this CD remembers about the actor
     def screen(p):

@@ -223,3 +223,25 @@ def test_pursuing_an_attached_part_is_answered_honestly(cfg, params):
     res = INI.adjudicate(st, cfg, {"kind": "pursue_project", "target": proj.title, "role": role.name}, 0)
     assert "earmarked" in res["text"] and res["result"] != "accepted"
     assert role.cast_id is None
+
+
+def test_development_package_follow_ups(cfg, params):
+    st = _world(cfg, params, weeks=2)
+    st.player.cash = 300000.0
+    res = INI.adjudicate(st, cfg, {"kind": "develop_project", "title": "Night Ferry", "genre": "drama",
+                                   "logline": "A ferry pilot hides a fugitive brother on the last crossing of the year."}, 0)
+    iid = res["initiative"]
+    early = INI.adjudicate(st, cfg, {"kind": "develop_project", "project": iid, "action": "attach",
+                                     "target": st.directors()[0].id}, 1)
+    assert early["result"] == "rejected"                        # nothing to attach to until a draft exists
+    T.advance(st, cfg, "2100-01-01", max_weeks=20)
+    ini = st.initiatives[iid]
+    if ini["status"] in ("pitching", "turnaround"):
+        before = st.player.cash
+        r = INI.adjudicate(st, cfg, {"kind": "develop_project", "project": "Night Ferry", "action": "revise"}, 2)
+        assert r["result"] == "pending" and st.player.cash < before and ini["status"] == "writing"
+        d = max(st.directors(), key=lambda p: p.prestige)
+        T.advance(st, cfg, "2100-01-01", max_weeks=12)
+        r = INI.adjudicate(st, cfg, {"kind": "develop_project", "project": iid, "action": "attach", "target": d.name}, 3)
+        assert r["result"] in ("accepted", "rejected")
+        assert (d.id in ini["data"]["attached"]) == (r["result"] == "accepted")
