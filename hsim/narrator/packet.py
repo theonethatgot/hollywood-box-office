@@ -243,6 +243,12 @@ def _people(st, cfg, canon) -> list:
                 if x and x != pl.id:
                     item = (x, f"in the cast of your film '{p.title}' ({st.roles[r].importance})")
                     (featured.append(item) if st.roles[r].importance == "featured" else ids.append(item))
+    for ini in st.initiatives.values():               # people your plans are built around
+        for x in ini["data"].get("attached", []):
+            add(x, f"attached to your project '{ini['data'].get('title')}'")
+    for n in reversed(st.narrative[-30:]):
+        for a_ in n.get("about", []):
+            add(a_, f"in your story's narrative canon ({n['date']})")
     for d in D.pending(st):
         prj = st.projects.get(d.refs.get("project")) or (
             st.projects.get(st.offers[d.refs["offer"]].project_id) if d.refs.get("offer") in st.offers else None)
@@ -258,9 +264,6 @@ def _people(st, cfg, canon) -> list:
         if j["person"] == pl.id:
             for c in j.get("colleagues", [])[:5]:
                 add(c, f"working with you on {j.get('show') or j.get('film') or j.get('play') or j['name']}")
-    for n in reversed(st.narrative[-30:]):
-        for a_ in n.get("about", []):
-            add(a_, f"in your story's narrative canon ({n['date']})")
     for e in canon:
         for a_ in e["actors"]:
             if a_ != pl.id:

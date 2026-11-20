@@ -292,3 +292,17 @@ def test_premiere_interrupt_stops_on_opening_not_every_weekend(cfg, params, monk
     monkeypatch.setattr(T, "tick", tick)
     r = T.advance(st, cfg, add_days(st.date, 28))
     assert r["weeks"] == 4 or r["stopped"] == "decision required"
+
+
+def test_greenlit_package_keeps_its_attached_director(cfg, params):
+    from hsim.core import rng as R
+    from hsim.systems import casting as C
+    st = _world(cfg, params, weeks=2)
+    studio = next(s for s in st.studios.values() if s.slate_per_year > 0)
+    d = next(p for p in st.directors() if not [c for c in p.calendar if c["end"] >= st.date])
+    ini = {"id": "t-pkg", "steps": [], "data": {"title": "Pkg", "genre": "drama", "logline": "A long enough logline here.",
+                                                "quality": 60.0, "attached": [d.id]}}
+    st.initiatives["t-pkg"] = ini
+    proj = INI._greenlight_development(st, cfg, ini, studio, R.stream(1, "pkg"))
+    assert proj.director_id == d.id
+    assert not C.available(d, proj.shoot_start, proj.shoot_end)           # now committed to it

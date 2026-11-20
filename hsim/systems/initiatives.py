@@ -23,7 +23,7 @@ import difflib
 
 from ..core import rng as R
 from ..core.state import WorldState
-from ..core.util import add_days, age_on, clamp, money, year
+from ..core.util import add_days, add_weeks, age_on, clamp, money, year
 from . import market
 
 KINDS = ("inquire", "pursue_project", "meet", "introduction", "social", "publicity", "reposition", "develop_project")
@@ -661,7 +661,20 @@ def _greenlight_development(st, cfg, ini, studio, g):
     p.logline_extra = "an original project developed by its star"
     genesis.schedule_from_greenlight(cfg, p, st.date, g)
     p.stage = "prepro"
-    casting.attach_director(st, cfg, p)
+    attached = [st.people[x] for x in data.get("attached", []) if x in st.people and not st.people[x].death]
+    director = next((x for x in attached if "director" in x.roles), None)
+    start, end = p.prepro_start or st.date, add_weeks(p.shoot_end or st.date, 1)
+    if director and casting.available(director, start, end):
+        p.director_id = director.id                  # the package is what the studio bought
+        director.calendar.append({"project_id": p.id, "start": start, "end": end, "kind": "direct"})
+        director.credits.append({"project_id": p.id, "title": p.title, "role": "director",
+                                 "year": year(p.release_date or p.shoot_end or st.date), "genre": p.genre, "kind": "film"})
+        st.log("director_attached", f"{director.name} will direct '{p.title}' for {studio.name}.",
+               actors=[director.id], refs={"project": p.id}, salience=2, public=True)
+    else:
+        if director:
+            _step(st, ini["id"], f"{director.name} is no longer free for the dates; {studio.name} will find a director.")
+        casting.attach_director(st, cfg, p)
     lead = next((st.roles[r] for r in p.role_ids if st.roles[r].importance == "lead"), None)
     if lead:
         if lead.gender != st.player.gender:          # the part is rewritten for its developer: name follows gender
@@ -671,6 +684,15 @@ def _greenlight_development(st, cfg, ini, studio, g):
         lead.age_min, lead.age_max = age - 5, age + 5
         lead.requested.append(st.player_id)
         lead.intended = st.player_id          # the developer is the attachment; still must accept terms
+    for actor in (x for x in attached if "actor" in x.roles and "director" not in x.roles):
+        part = next((st.roles[r] for r in p.role_ids if st.roles[r].importance in ("colead", "supporting")
+                     and not st.roles[r].intended), None)
+        if part:                                  # an attached actor gets first refusal on a principal part
+            if part.gender != actor.gender:
+                from ..world.people import character_name
+                part.gender, part.name = actor.gender, character_name(g, actor.gender)
+            a = age_on(actor.birth, st.date)
+            part.age_min, part.age_max, part.intended = a - 5, a + 5, actor.id
     return p
 
 
