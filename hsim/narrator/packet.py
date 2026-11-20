@@ -347,7 +347,8 @@ def _relationship_status(st, p) -> str:
     if p.partner_id in st.people:
         r = st.rel(p.id, p.partner_id, create=False)
         documented = bool(r and any(h.get("documented") for h in r.history))
-        label = f"{p.partner_status} {st.people[p.partner_id].name}"
+        status = "in a relationship with" if (p.partner_status == "dating" and documented) else p.partner_status
+        label = f"{status} {st.people[p.partner_id].name}"
         if p.historical or st.people[p.partner_id].historical:
             label += " (documented)" if documented else " (simulated, not historical)"
         return label

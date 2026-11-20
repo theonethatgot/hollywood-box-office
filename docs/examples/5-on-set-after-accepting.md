@@ -1,4 +1,4 @@
-# Narrator packet pkt-00020 — 1981-05-01
+# Narrator packet pkt-00020 — 1981-05-08
 
 ## RULES
 You are the narrator of a Hollywood career simulation. The engine is the authority.
@@ -14,9 +14,9 @@ You are the narrator of a Hollywood career simulation. The engine is the authori
 ## STATE
 ```yaml
 packet: pkt-00020
-date: '1981-05-01'
-covers: 1981-04-10 .. 1981-05-01
-state_hash: 0512205f07999dff
+date: '1981-05-08'
+covers: 1981-04-10 .. 1981-05-08
+state_hash: 62cc47ff7d071638
 protagonist:
   id: player
   name: Claire Holloway
@@ -45,59 +45,66 @@ protagonist:
     hometown: Boston
     signature: plays guitar in the trailer between setups
   money:
-    cash: 97642.0
+    cash: 88695.0
     monthly_costs: 6000.0
   energy: fresh
   relationship_status: single
   awards: []
 canon:
-- id: ev-6435
+- id: ev-6354
   date: '1981-04-10'
-  text: Your agency got you into the premiere of 'Knightriders', where you met Tom Savini.
+  text: You were invited to the premiere of 'Lonely Season' (your agency represents 2 of the film's cast), where
+    you met Marsha Mason.
   provenance: simulated event in this timeline
-- id: ev-6563
-  date: '1981-04-24'
-  text: 'Tension on the set of ''Second Harbor'': you clashed with Sondra Locke.'
-  provenance: simulated event in this timeline
-- id: ev-6575
-  date: '1981-04-24'
-  text: There is an unmistakable spark between you and Wendy Nakamura on the set of 'Second Harbor'.
-- id: ev-6576
-  date: '1981-04-24'
-  text: 'Chemistry with Wendy Nakamura: pursue something, or keep it professional?'
+- id: ev-6564
+  date: '1981-05-01'
+  text: 'Carlos Fielding checked in; they submitted you for 14 roles this past month; 0 got you in the room; the
+    most common feedback on passes: ''they went with other actors''; they''re steering you toward action parts,
+    where you''ve been landing near the top of the room; they want to get you seen in a respected stage production.'
 period_summary:
-  overview: 3 week(s), 7 submission(s) by your agent, 0 call-in(s), 0 audition(s), 0 booking(s); net money +$0.
-  quiet_period: false
-  note: ''
+  overview: 4 week(s), 12 submission(s) by your agent, 0 call-in(s), 0 audition(s), 0 booking(s); net money -$6k.
+  quiet_period: true
+  note: 'A quiet stretch: realistic downtime. Portray ordinary life, waiting and small moments; do not invent career
+    breakthroughs.'
 rulings:
 - proposal: dec-00004
   result: applied
-  text: You kept things professional with Jim Belushi.
+  text: You kept things professional with Carlo Reali.
   type: decision
 delegated: []
 career_activity:
   submissions:
-  - '1981-04-17: Donna Warner (featured) in ''The Double Shift'' (Buena Vista (Disney), casting Maxine Wolcott)
-    — passed: they went with other actors'
-  - '1981-04-17: Margaret Lowell (featured) in ''The Double Shift'' (Buena Vista (Disney), casting Maxine Wolcott)
-    — passed: they went with other actors'
   - '1981-04-17: June Gilmore (featured) in ''Winter Witness'' (Columbia Pictures, casting Faye Stanton) — passed:
     they went with other actors'
   - '1981-04-17: Diane Farrell (supporting) in ''Outer Station'' (20th Century Fox, casting Barbara Flynn) — passed:
     they went with other actors'
   - '1981-04-24: Lori (lead) in ''Station of the Gods'' (20th Century Fox, casting Elizabeth Rossi) — passed: they
     went with other actors'
+  - '1981-04-24: Lisa Merrick (featured) in ''Station of the Gods'' (20th Century Fox, casting Elizabeth Rossi)
+    — passed: they went with other actors'
   - '1981-04-24: Carol Wade (featured) in ''Silent Season'' (Orion Pictures, casting Cheryl Conway) — passed: they
     went with other actors'
   - '1981-04-24: Laura (featured) in ''Red Strike'' (Paramount Pictures, casting Barry Fielding) — passed: they
     went with other actors'
+  - '1981-05-01: Wendy Palmer (featured) in ''Line of the Deep'' (Columbia Pictures, casting Faye Stanton) — passed:
+    they went with other actors'
+  - '1981-05-01: Linda (colead) in ''Justice of the Fallen'' (Metro-Goldwyn-Mayer, casting Vanessa Malone) — passed:
+    they went with other actors'
+  - '1981-05-01: Simone (supporting) in ''Justice of the Fallen'' (Metro-Goldwyn-Mayer, casting Vanessa Malone)
+    — passed: they went with other actors'
+  - '1981-05-01: Daphne Ramsey (featured) in ''Justice of the Fallen'' (Metro-Goldwyn-Mayer, casting Vanessa Malone)
+    — passed: they went with other actors'
+  agent_calls:
+  - '1981-05-01: Carlos Fielding checked in; they submitted you for 14 roles this past month; 0 got you in the room;
+    the most common feedback on passes: ''they went with other actors''; they''re steering you toward action parts,
+    where you''ve been landing near the top of the room; they want to get you seen in a respected stage production.'
 your_work:
 - title: Second Harbor
   studio: Orion Pictures
   genre: drama
   premise: An estranged daughter tries to rebuild a life after prison with nothing left to lose.
   your_role: 'Holly Moreno — colead: the second lead; a major arc opposite the protagonist'
-  director: Jerome Hellman
+  director: Michelangelo Antonioni
   costars:
   - Sondra Locke as Vanessa Winslow (lead, character name simulated)
   - Wendy Nakamura as Gloria Hollis (supporting, character name simulated)
@@ -105,50 +112,81 @@ your_work:
   - Mildred Natwick as Joan Kowalski (featured, character name simulated)
   - Marilyn Hassett as Lori Kendall (featured, character name simulated)
   - Jack Weston as Hal (featured, character name simulated)
-  - Melina Mercouri as Teresa (featured, character name simulated)
+  - Eddra Gale as Teresa (featured, character name simulated)
   - Louis Gossett Jr. as Bruce Okafor (featured, character name simulated)
   - Daniel Massey as Jerry Fletcher (featured, character name simulated)
-  - James Broderick as Steven (featured, character name simulated)
+  - Carlo Reali as Steven (featured, character name simulated)
   - Jim Belushi as Frank Petrakis (featured, character name simulated)
   - Sam Raimi as Glenn Farrell (featured, character name simulated)
-  - Dub Taylor as Richard Radford (featured, character name simulated)
+  - Karl Malden as Richard Radford (featured, character name simulated)
   stage: shooting
   location: Vancouver
   terms: $179k
   identity: gritty, New York-set drama; a mid-budget studio picture looking for a marketable lead
+  story:
+    provenance: simulated screenplay for a fictional production
+    logline: 'A gritty, New York-set drama: An estranged daughter tries to rebuild a life after prison with nothing
+      left to lose.'
+    central_conflict: Vanessa Winslow must face what tore the family apart, and Holly Moreno is the one person who
+      remembers it differently
+    characters:
+    - 'Vanessa Winslow (the protagonist, played by Sondra Locke): wants to keep a promise; flaw: a temper they can''t
+      control; arc from a temper they can''t control toward courage'
+    - 'Holly Moreno (the old friend, played by Claire Holloway): wants to belong somewhere; flaw: drinking; arc
+      from drinking toward honesty'
+    - 'Gloria Hollis (the lawyer, played by Wendy Nakamura): wants to be left alone; flaw: trusting the wrong people;
+      arc from trusting the wrong people toward a reckoning with letting go'
+    relationships:
+    - 'Vanessa Winslow and Holly Moreno: old friends with unfinished business'
+    - 'Vanessa Winslow and Gloria Hollis: antagonists'
+    beats:
+    - 'Setup: Vanessa Winslow''s ordinary life, already cracking (An estranged daughter tries to rebuild a life
+      after prison with nothing left to lose)'
+    - 'Inciting incident: an event forces Vanessa Winslow and Holly Moreno together'
+    - 'Midpoint: a revelation turns Gloria Hollis from obstacle into real threat'
+    - 'Low point: Vanessa Winslow loses what they were fighting for, and Holly Moreno walks away'
+    - 'Climax: Vanessa Winslow confronts Gloria Hollis; what Vanessa Winslow has become decides the ending'
+    creative_intent: Michelangelo Antonioni runs a tight, efficient set and expects lines cold on the day (simulation
+      characterisation of this production, not a documented account of their real working methods; portray consistently
+      with what is publicly known about them)
+    your_key_scenes:
+    - an argument in a moving car
+    - a showdown in the rain
+    your_read_of_the_script: you think it's solid; the set pieces work, though parts feel familiar (your impression;
+      it may be wrong)
   provenance: 'simulated production: not a real film; its cast and characters are part of this timeline'
   shoot: 1981-03-27 to 1981-05-15
 network:
-- name: Sondra Locke
-  id: wd:Q284166
-  who: actor-director
-  how_you_know_them: met at the premiere of 'Bronco Billy'
+- name: Carlos Fielding
+  id: gen-ag-ag-gk-2
+  who: agent at Gersh & Kline (fictional)
+  how_you_know_them: monthly check-in call
   standing: cordial
-  last_interaction: clashed on the set of 'Second Harbor' (1981-04-24)
+  last_interaction: monthly check-in call (1981-05-01)
+- name: John Dukakis
+  id: wd:Q6230322
+  who: actor
+  how_you_know_them: worked together on a small part in 'Second Harbor' (Orion Pictures)
+  standing: cordial
+  last_interaction: worked together on a small part in 'Second Harbor' (Orion Pictures) (1981-05-01)
 - name: Mitchell Irving
   id: gen-a-00145
   who: actor
   how_you_know_them: worked together on a small part in 'Second Harbor' (Orion Pictures)
   standing: cordial
   last_interaction: worked together on a small part in 'Second Harbor' (Orion Pictures) (1981-04-10)
-- name: Tom Savini
-  id: wd:Q152309
+- name: Marsha Mason
+  id: wd:Q235211
   who: actor
-  how_you_know_them: met at the premiere of 'Knightriders'
+  how_you_know_them: met at the premiere of 'Lonely Season'
   standing: cordial
-  last_interaction: met at the premiere of 'Knightriders' (1981-04-10)
+  last_interaction: met at the premiere of 'Lonely Season' (1981-04-10)
 - name: Clark Kowalski
   id: gen-a-00335
   who: actor
   how_you_know_them: worked together on a small part in 'Second Harbor' (Orion Pictures)
   standing: cordial
   last_interaction: worked together on a small part in 'Second Harbor' (Orion Pictures) (1981-04-03)
-- name: Carlos Fielding
-  id: gen-ag-ag-gk-2
-  who: agent at Gersh & Kline (fictional)
-  how_you_know_them: monthly check-in call
-  standing: cordial
-  last_interaction: monthly check-in call (1981-04-03)
 - name: Paul Dooley
   id: wd:Q708097
   who: actor
@@ -173,10 +211,10 @@ network:
   how_you_know_them: worked together on a small part in 'Second Harbor' (Orion Pictures)
   standing: cordial
   last_interaction: worked together on a small part in 'Second Harbor' (Orion Pictures) (1981-03-13)
-- name: Christopher Mayer
-  id: wd:Q525523
-  who: actor
-  how_you_know_them: met at the premiere of 'Stunts Unlimited'
+- name: Dale Winslow
+  id: gen-d-tv-4-2
+  who: director
+  how_you_know_them: worked together on a guest role on 'Fifth Family' (first-run syndication)
   standing: cordial
   last_interaction: caught up over lunch at Musso & Frank Grill (1981-03-06)
 - name: Dennis Conway
@@ -210,11 +248,9 @@ network:
   standing: cordial
   last_interaction: worked together on a guest role on 'Sky Squadron' (PBS) (1981-02-27)
 open_threads:
-- 'Decision waiting: Chemistry with Wendy Nakamura: pursue something, or keep it professional? (by 1981-05-15)'
 - '''Second Harbor'' is in shooting'
-- 'Career goal: you want serious, respected work that gets noticed at awards time. So far in 1981: 36 submissions,
-  9 call-ins, 1 film role(s) booked.'
-- 'Relationship in motion with Sondra Locke: clashed on the set of ''Second Harbor'''
+- 'Career goal: you want serious, respected work that gets noticed at awards time. So far in 1981: 51 submissions,
+  13 call-ins, 1 film role(s) booked.'
 people:
 - id: gen-ag-ag-gk-2
   name: Carlos Fielding
@@ -230,17 +266,17 @@ people:
   bio: Agent at Gersh & Kline (fictional); a protective, old-school agent.
   persona:
     hometown: Kansas City
-    signature: talks openly about wanting to direct
+    signature: reads the trades cover to cover before 7 a.m.
     style: a protective, old-school agent
   relationship_status: single
   with_you:
     standing: cordial
     status: acquainted
     history:
-    - monthly check-in call (1981-01-02)
     - monthly check-in call (1981-02-06)
     - monthly check-in call (1981-03-06)
     - monthly check-in call (1981-04-03)
+    - monthly check-in call (1981-05-01)
 - id: wd:Q284166
   name: Sondra Locke
   age: 36
@@ -254,12 +290,12 @@ people:
   - private
   motivation: driven mostly by financial security and big paydays, and also by fame and visibility
   ambition: wants bigger paydays and financial security
-  bio: American actress (1944–2018); known for 'Death Game' (1977).
+  bio: American actress-director (born 1944); known for 'Death Game' (1977); Academy Award nominee.
   recent_work:
   - '''The Long Way Home'' (1980, tv_movie; this timeline)'
   - '''Outer Horizon'' (1981, lead; this timeline)'
   - '''Second Harbor'' (1981, lead; this timeline)'
-  relationship_status: dating Barry Corbin (simulated, not historical)
+  relationship_status: in a relationship with Clint Eastwood (documented)
   real_person: true
   note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
     traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
@@ -269,7 +305,6 @@ people:
     status: acquainted
     history:
     - met at the premiere of 'Bronco Billy' (1980-06-13)
-    - clashed on the set of 'Second Harbor' (1981-04-24)
 - id: gen-a-00329
   name: Wendy Nakamura
   age: 19
@@ -321,15 +356,15 @@ people:
   age: 75
   profession: actor
   public_profile: unknown to the public
-  reputation: working actor in comedy and drama
+  reputation: working actor in drama and action
   traits:
   - generous with colleagues
   - hard to read
   motivation: driven mostly by respect and awards, and also by challenging, meaningful work
   ambition: wants serious, respected work that gets noticed at awards time
-  bio: American actress (1905–1994); known for 'At Long Last Love' (1975).
+  bio: American actress (born 1905); known for 'At Long Last Love' (1975); Academy Award nominee.
   recent_work:
-  - '''Lucky Vacation'' (1981, featured; this timeline)'
+  - '''Othello'' (1981, featured; this timeline)'
   - '''Second Harbor'' (1981, featured; this timeline)'
   - '''Lost Colony'' (1981, featured; this timeline)'
   relationship_status: single
@@ -351,7 +386,7 @@ people:
   - drawn to risky material
   motivation: driven mostly by challenging, meaningful work, and also by respect and awards
   ambition: wants challenging material over safe paychecks
-  bio: American screen and television actress (born 1947); known for 'The Bell Jar' (1979).
+  bio: American actress (born 1947); known for 'The Bell Jar' (1979).
   recent_work:
   - '''Lennox''s Letters'' (1981, featured; this timeline)'
   - '''a national commercial for a fast-food chain'' (1980, commercial; this timeline)'
@@ -376,7 +411,7 @@ people:
   - outgoing
   motivation: driven mostly by fame and visibility, and also by financial security and big paydays
   ambition: wants a breakout role and a recognisable name
-  bio: American actor (1924–1996); known for 'The Ritz' (1976).
+  bio: American actor (born 1924); known for 'The Ritz' (1976).
   recent_work:
   - '''a national commercial for a family sedan'' (1980, commercial; this timeline)'
   - '''Second Harbor'' (1981, featured; this timeline)'
@@ -390,24 +425,24 @@ people:
     standing: cordial
     status: acquainted
     history: []
-- id: wd:Q228611
-  name: Melina Mercouri
-  age: 60
+- id: wd:Q3047317
+  name: Eddra Gale
+  age: 59
   profession: actor
-  public_profile: known mostly inside the industry
-  reputation: character actor in comedy and romance
+  public_profile: unknown to the public
+  reputation: working actor in comedy and drama
   traits:
   - undisciplined
+  - cautious with choices
   - hard to read
-  motivation: driven mostly by fame and visibility, and also by financial security and big paydays
-  ambition: wants a breakout role and a recognisable name
-  bio: Greek actress, singer and politician. Minister of Culture of Greece (1920-1994); known for 'Nasty Habits'
-    (1977).
+  motivation: driven mostly by financial security and big paydays, and also by fame and visibility
+  ambition: wants bigger paydays and financial security
+  bio: American actress (born 1921); known for 'Revenge of the Cheerleaders' (1976).
   recent_work:
-  - '''Dugan''s Diner'' (1980, guest; this timeline)'
-  - '''Second-Hand Hearts'' (1980, film_bit; this timeline)'
+  - '''Modern Romance'' (1981, featured; this timeline)'
+  - '''Absence of Malice'' (1981, featured; this timeline)'
   - '''Second Harbor'' (1981, featured; this timeline)'
-  relationship_status: married (spouse outside the film industry) (documented)
+  relationship_status: single
   real_person: true
   note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
     traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
@@ -428,7 +463,7 @@ people:
   - undisciplined
   motivation: driven mostly by challenging, meaningful work, and also by respect and awards
   ambition: wants challenging material over safe paychecks
-  bio: American actor (1936–2024); known for 'The Deep' (1977).
+  bio: American actor (born 1936); known for 'The Deep' (1977); award-nominated.
   recent_work:
   - '''Second Harbor'' (1981, featured; this timeline)'
   - '''a national commercial for an airline'' (1981, commercial; this timeline)'
@@ -441,7 +476,8 @@ people:
   with_you:
     standing: cordial
     status: acquainted
-    history: []
+    history:
+    - met at the premiere of 'Emerson's Promise' (1981-02-27)
 - id: wd:Q1161698
   name: Daniel Massey
   age: 47
@@ -452,7 +488,7 @@ people:
   - private
   motivation: driven mostly by respect and awards, and also by challenging, meaningful work
   ambition: wants serious, respected work that gets noticed at awards time
-  bio: English actor and performer (1933-1998); known for 'The Incredible Sarah' (1976).
+  bio: English actor (born 1933); known for 'The Incredible Sarah' (1976); Academy Award nominee.
   recent_work:
   - '''Hometown'' (1980, featured; this timeline)'
   - '''Escape to Victory'' (1981, featured; this timeline)'
@@ -466,24 +502,21 @@ people:
     standing: cordial
     status: acquainted
     history: []
-- id: wd:Q718691
-  name: James Broderick
-  age: 54
+- id: wd:Q1042407
+  name: Carlo Reali
+  age: 50
   profession: actor
-  public_profile: a recognisable face
-  reputation: character actor in drama and thriller
+  public_profile: unknown to the public
+  reputation: working actor in action and drama
   traits:
-  - unflappable
-  - guarded
-  - vain
-  - chronically late
-  motivation: driven mostly by respect and awards, and also by challenging, meaningful work
-  ambition: wants serious, respected work that gets noticed at awards time
-  bio: American actor (1927-1982); known for 'The Phantom of the Open Hearth' (1976).
+  - hungry
+  - drawn to risky material
+  motivation: driven mostly by fame and visibility, and also by financial security and big paydays
+  ambition: wants a breakout role and a recognisable name
+  bio: Italian actor (born 1930); known for 'Odds and Evens' (1978).
   recent_work:
-  - '''a national commercial for a fast-food chain'' (1981, commercial; this timeline)'
+  - '''Odds and Evens'' (1978, supporting; documented)'
   - '''Second Harbor'' (1981, featured; this timeline)'
-  - '''Candida'' (1981, stage; this timeline)'
   relationship_status: single
   real_person: true
   note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
@@ -498,14 +531,14 @@ people:
   age: 26
   profession: actor
   public_profile: known mostly inside the industry
-  reputation: working actor in drama and thriller
+  reputation: working actor in thriller and drama
   traits:
   - quick-tempered
   motivation: driven mostly by respect and awards, and also by fame and visibility
   ambition: wants serious, respected work that gets noticed at awards time
-  bio: American actor.
+  bio: American actor (born 1954).
   recent_work:
-  - '''Kiss Daddy Goodbye'' (1981, featured; this timeline)'
+  - '''Thief'' (1981, supporting; this timeline)'
   - '''Second Harbor'' (1981, featured; this timeline)'
   - '''Summer of ''62'' (1981, tv_movie; this timeline)'
   relationship_status: single
@@ -530,7 +563,7 @@ people:
   - drawn to risky material
   motivation: driven mostly by fame and visibility, and also by financial security and big paydays
   ambition: wants a breakout role and a recognisable name
-  bio: American filmmaker (born 1959).
+  bio: American actor-director (born 1959).
   recent_work:
   - '''Hedda Gabler'' (1980, stage; this timeline)'
   - '''Second Harbor'' (1981, featured; this timeline)'
@@ -544,24 +577,22 @@ people:
     standing: cordial
     status: acquainted
     history: []
-- id: wd:Q611266
-  name: Dub Taylor
-  age: 74
+- id: wd:Q94992
+  name: Karl Malden
+  age: 69
   profession: actor
-  public_profile: known mostly inside the industry
-  reputation: character actor in action and comedy
+  public_profile: a recognisable face
+  reputation: character actor in drama and scifi
   traits:
-  - even-keeled
-  - unhurried about fame
-  - outgoing
-  motivation: driven mostly by financial security and big paydays, and also by fame and visibility
-  ambition: wants bigger paydays and financial security
-  bio: American actor (1907-1994); known for 'They Went That-A-Way & That-A-Way' (1978).
+  - quick-tempered
+  motivation: driven mostly by respect and awards, and also by fame and visibility
+  ambition: wants serious, respected work that gets noticed at awards time
+  bio: American actor (born 1912); known for 'Beyond the Poseidon Adventure' (1979); Academy Award winner.
   recent_work:
-  - '''a national commercial for a breakfast cereal'' (1980, commercial; this timeline)'
-  - '''The Dead Force'' (1981, featured; this timeline)'
+  - '''Long Country'' (1980, featured; this timeline)'
+  - '''The Quiet Inheritance'' (1981, featured; this timeline)'
   - '''Second Harbor'' (1981, featured; this timeline)'
-  relationship_status: dating Judy Canova (simulated, not historical)
+  relationship_status: single
   real_person: true
   note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
     traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
@@ -572,76 +603,66 @@ people:
     history: []
 industry:
   box_office_chart:
-  - 1. 'The Hand' (Orion Pictures) — $5.4M this week, $5.4M total, week 1
-  - 2. 'The Incredible Shrinking Woman' (Universal Pictures) — $3.5M this week, $78.5M total, week 13
-  - 3. 'Little Adventure' (Buena Vista (Disney)) — $3.3M this week, $8.1M total, week 2
-  - 4. 'Caveman' (United Artists) — $2.1M this week, $5.5M total, week 2
-  - 5. 'Dead Target' (Metro-Goldwyn-Mayer) — $2.1M this week, $61.0M total, week 12
+  - 1. 'The Hand' (Orion Pictures) — $4.0M this week, $9.4M total, week 2
+  - 2. 'The Incredible Shrinking Woman' (Universal Pictures) — $3.3M this week, $80.6M total, week 14
+  - 3. 'Dead Target' (Metro-Goldwyn-Mayer) — $2.6M this week, $71.4M total, week 13
+  - 4. 'Little Adventure' (Buena Vista (Disney)) — $2.2M this week, $9.0M total, week 3
+  - 5. 'Wolcott's Witness' (Columbia Pictures) — $1.9M this week, $16.2M total, week 6
   news:
-  - date: '1981-04-10'
-    text: Ron Howard and Jessica Lange split up.
+  - date: '1981-05-01'
+    text: Metro-Goldwyn-Mayer greenlit 'Justice of the Fallen', an action picture. A federal marshal takes on a
+      corrupt sheriff with forty-eight hours to clear his name.
+  - date: '1981-05-01'
+    text: Dan Curtis will direct 'The Pact' for New World Pictures.
+    provenance: fictional production
+  - date: '1981-05-01'
+    text: New World Pictures greenlit 'The Pact', a horror picture. A young family moves into a house with a dark
+      history as the bodies pile up.
+  - date: '1981-05-01'
+    text: Frank Bishop will direct 'Magic Dog' for Paramount Pictures.
+  - date: '1981-05-01'
+    text: Paramount Pictures greenlit 'Magic Dog', a family picture. Two runaway sisters rescue a racehorse from
+      the glue factory with the help of unlikely friends.
+  - date: '1981-05-01'
+    text: Nathan Monroe was cast as Stuart (lead) in 'Line of the Deep' (Columbia Pictures).
+  - date: '1981-05-01'
+    text: Sylvester Stallone was cast as Felix Gallagher (lead) in 'Justice of the Fallen' (Metro-Goldwyn-Mayer).
+    provenance: simulated casting in a fictional production
+  - date: '1981-05-01'
+    text: Sigourney Weaver was cast as Paula Hollis (lead) in 'Magic Dog' (Paramount Pictures).
+    provenance: simulated casting in a fictional production
+  - date: '1981-05-01'
+    text: 'Reviews for ''Friday the 13th Part 2'': poor (critics'' aggregate 41/100); opening-night audiences gave
+      it a C+.'
+    provenance: simulated event in this timeline
+  - date: '1981-05-01'
+    text: 'Reviews for ''The Nesting'': poor (critics'' aggregate 45/100); opening-night audiences gave it an F.'
+    provenance: simulated event in this timeline
+  - date: '1981-05-01'
+    text: 'Trades: ''Friday the 13th Part 2'' beat industry expectations on its opening.'
+  - date: '1981-05-01'
+    text: '''The Blues Brothers'' finished its theatrical run with $29.6M domestic and an estimated $14.8M overseas.'
+    provenance: simulated event in this timeline
+  - date: '1981-05-01'
+    text: Jim Davis died.
+    provenance: documented history
+  - date: '1981-05-01'
+    text: Susan Blakely and Nicholas Hammond have started seeing each other.
     provenance: 'simulated (not historical): an alternate-timeline development'
-  - date: '1981-04-24'
-    text: Desmond Halloran will direct 'Hardcase' for Warner Bros..
-  - date: '1981-04-24'
-    text: Warner Bros. greenlit 'Hardcase', an action picture. A federal marshal must escort a witness across the
-      border in a city on the edge.
-  - date: '1981-04-24'
-    text: Jessica Lange turned down Elena Halloran in 'Palmer's Promise'.
-    provenance: simulated event in this timeline
-  - date: '1981-04-24'
-    text: Joseph Mascolo was cast as Mitchell Rossi (featured) in 'Outer Station' (20th Century Fox).
-    provenance: simulated casting in a fictional production
-  - date: '1981-04-24'
-    text: Susan Blakely was cast as Diana (lead) in 'Silent Season' (Orion Pictures).
-    provenance: simulated casting in a fictional production
-  - date: '1981-04-24'
-    text: Sally Field was cast as Vanessa Castillo (lead) in 'Hardcase' (Warner Bros.).
-    provenance: simulated casting in a fictional production
-  - date: '1981-04-24'
-    text: 'Reviews for ''Ms. 45'': mixed (critics'' aggregate 54/100); opening-night audiences gave it an F.'
-    provenance: simulated event in this timeline
-  - date: '1981-04-24'
-    text: 'Reviews for ''The Hand'': strong (critics'' aggregate 82/100); opening-night audiences gave it an A-.'
-    provenance: simulated event in this timeline
-  - date: '1981-04-24'
-    text: 'Reviews for ''Circle of Power'': poor (critics'' aggregate 44/100); opening-night audiences gave it a
-      D.'
-    provenance: simulated event in this timeline
-  - date: '1981-04-24'
-    text: 'Trades: ''Ms. 45'' beat industry expectations on its opening.'
-  - date: '1981-04-24'
-    text: '''Hopscotch'' finished its theatrical run with $16.2M domestic and an estimated $9.4M overseas.'
-    provenance: simulated event in this timeline
-  - date: '1981-04-24'
-    text: '''The Howling'' finished its theatrical run with $419k domestic and an estimated $229k overseas.'
-    provenance: simulated event in this timeline
-  - date: '1981-04-24'
-    text: '''Touched by Love'' finished its theatrical run with $23.3M domestic and an estimated $17.4M overseas.'
-    provenance: simulated event in this timeline
-pending_decisions:
-- id: dec-00005
-  kind: romance
-  summary: 'Chemistry with Wendy Nakamura: pursue something, or keep it professional?'
-  options:
-  - pursue
-  - keep_professional
-  deadline: '1981-05-15'
-  if_unanswered: keep_professional
-  context: Pursuing is your choice; how they respond is theirs.
+pending_decisions: []
 continuity:
   career_so_far:
+  - '1980: ''Fifth Family'' (guest)'
+  - '1980: ''Mountain Riders'' (guest)'
   - '1980: ''Downtown Precinct'' (guest)'
-  - '1980: ''Central Precinct'' (guest)'
-  - '1980: ''Fifth Place'' (guest)'
-  - '1980: ''Sky Squadron'' (guest)'
+  - '1980: ''Shadow Ranch'' (guest)'
   - '1980: ''Desert Force'' (guest)'
   - '1980: ''Coast Force'' (guest)'
   - '1980: ''Desert Force'' (guest)'
-  - '1981: ''Downtown Division'' (guest)'
+  - '1981: ''City Emergency West'' (guest)'
   - '1981: ''Sky Squadron'' (guest)'
   - '1981: ''Second Harbor'' (colead)'
-  - '1981: ''Coast Force'' (guest)'
+  - '1981: ''City Emergency West'' (guest)'
   - '1981: ''Sky Squadron'' (guest)'
   earlier_key_moments:
   - '1980-01-04: Claire Holloway begins their story in Hollywood.'
@@ -649,31 +670,31 @@ continuity:
     Llewellyn Moxey; casting Marcus Halloran) on 1980-07-11. Premise: 1981 film by John Llewellyn Moxey.'
   - '1980-07-11: You auditioned for Gloria in ''Killjoy'' and did not get a callback.'
   - '1980-12-26: Audition: Gloria Thorne, the lead role in ''Morrow''s Friends'' (family, Universal Pictures; director
-    Natalie Nolan; casting Deborah Porter) on 1981-01-02. Premise: A clumsy inventor sets out to find a lost treasure
+    Dean Kessler; casting Deborah Porter) on 1981-01-02. Premise: A clumsy inventor sets out to find a lost treasure
     over one magical summer.'
   - '1981-01-02: You auditioned for Gloria Thorne in ''Morrow''s Friends'' and did not get a callback.'
   - '1981-01-23: You auditioned for Paula in ''The First Hours'' and did not get a callback.'
   - '1981-02-06: You auditioned for Holly Moreno in ''Second Harbor'' and won the part.'
   - '1981-02-06: Offer (after auditions): Holly Moreno, colead in ''Second Harbor'' — An estranged daughter tries
-    to rebuild a life after prison with nothing left to lose. Orion Pictures, dir. Jerome Hellman. Terms $179k.
-    Shoots 1981-03-27 to 1981-05-15 (Vancouver).'
+    to rebuild a life after prison with nothing left to lose. Orion Pictures, dir. Michelangelo Antonioni. Terms
+    $179k. Shoots 1981-03-27 to 1981-05-15 (Vancouver).'
   - '1981-02-13: Claire Holloway was cast as Holly Moreno (colead) in ''Second Harbor'' (Orion Pictures).'
   - '1981-03-27: Principal photography began on ''Second Harbor'' in Vancouver (7 weeks scheduled).'
-  - '1981-04-03: There is an unmistakable spark between you and Jim Belushi on the set of ''Second Harbor''.'
-  - '1981-04-03: Chemistry with Jim Belushi: pursue something, or keep it professional?'
+  - '1981-04-03: There is an unmistakable spark between you and Carlo Reali on the set of ''Second Harbor''.'
+  - '1981-04-03: Chemistry with Carlo Reali: pursue something, or keep it professional?'
   recent_scenes_and_threads:
-  - '1981-02-27: with Sharon Abernathy: worked together on a guest role on ''Sky Squadron'' (PBS)'
   - '1981-03-06: with Carlos Fielding: monthly check-in call'
-  - '1981-03-06: with Christopher Mayer: caught up over lunch at Musso & Frank Grill'
+  - '1981-03-06: with Dale Winslow: caught up over lunch at Musso & Frank Grill'
   - '1981-03-13: with Lana Wood: worked together on a small part in ''Second Harbor'' (Orion Pictures)'
   - '1981-03-20: with Bill Allen: worked together on a small part in ''Second Harbor'' (Orion Pictures)'
   - '1981-03-20: with Matt Murphy: worked together on a small part in ''Second Harbor'' (Orion Pictures)'
   - '1981-04-03: with Carlos Fielding: monthly check-in call'
   - '1981-04-03: with Clark Kowalski: worked together on a small part in ''Second Harbor'' (Orion Pictures)'
   - '1981-04-03: with Paul Dooley: worked together on a small part in ''Second Harbor'' (Orion Pictures)'
+  - '1981-04-10: with Marsha Mason: met at the premiere of ''Lonely Season'''
   - '1981-04-10: with Mitchell Irving: worked together on a small part in ''Second Harbor'' (Orion Pictures)'
-  - '1981-04-10: with Tom Savini: met at the premiere of ''Knightriders'''
-  - '1981-04-24: with Sondra Locke: clashed on the set of ''Second Harbor'''
+  - '1981-05-01: with Carlos Fielding: monthly check-in call'
+  - '1981-05-01: with John Dukakis: worked together on a small part in ''Second Harbor'' (Orion Pictures)'
 era:
   year: 1981
   average_ticket_price: $2.78
@@ -681,7 +702,7 @@ era:
     fast.
 narrator_notes:
 - date: '1980-01-04'
-  text: Nora shares a cramped Silver Lake apartment with her friend Gina, a waitress writing a play.
+  text: Claire rents a small house in Laurel Canyon and keeps a summer-stock scrapbook on the shelf.
 ```
 
 ## REPLY FORMAT

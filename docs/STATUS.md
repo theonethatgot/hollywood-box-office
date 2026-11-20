@@ -80,6 +80,33 @@ Example packets: `docs/examples/`.
   be protected like marriages.
 - Real people's personality traits are still priors; only goals and reputation come from their documented careers.
 
+## Narrative integrity pass
+- **Continuity isolation:** the cross-protagonist "Gina" note came from the playtest harness (it added Nora's
+  note to every career), not the engine. Regression test added; `submit` now warns when a note's subject
+  matches nobody in the world.
+- **No future information:** real people's bios are built only from facts dated before the start (nationality,
+  profession, birth year, best-known pre-start credit, pre-start honours). Wikidata descriptions (which carry
+  death years and later careers in ~4,200 of ~11,000 people) are no longer shown. Film descriptions that
+  mention later years are dropped. Test added.
+- **Documented partnerships:** Wikidata P451 with dates (497 people, 481 dated partnerships). Ongoing ones load as
+  documented relationships; future starts and ends are events with dependencies. Documented relationships
+  (married or not) are protected against simulated breakups unless **relational strain in this timeline** exists
+  (clashes, cooling, long separations); a divergent career alone no longer weakens them. Verified: Sondra Locke
+  and Clint Eastwood stay together through 1983; Keaton and Beatty separate in 1981 as documented.
+- **Film story profiles:** persistent outline for productions the protagonist auditions for or works on:
+  central conflict, characters with functions, wants, flaws and arcs, relationships, beats, key scenes, director's
+  intent (real directors' intent labelled as characterisation), and the protagonist's noisy read of the script.
+  Real films get no invented plot. Character relationships feed on-set closeness (friction and chemistry).
+- **Contextual social life:** profession-appropriate personas; on-set friction needs a concrete circumstance
+  (billing rivalry, director vs ego, schedule pressure, exhaustion, two volatile temperaments); chemistry scales
+  with how closely people work; catch-ups need a real connection and scale with how many you have; premiere
+  invitations need a reason that the packet states.
+
+### Still open
+- Real auteurs occasionally direct fictional projects (e.g. Antonioni on an Orion drama): plausible in an
+  alternate timeline but unusual; needs a stronger "documented-career fit" for real directors.
+- Real people's personalities remain priors (labelled). Biography-derived traits with citations are planned.
+
 ## Calibration (4 historical worlds × 2 years, 1980–81, 1980 dollars)
 | Metric | Simulated | Reference / note |
 |---|---|---|

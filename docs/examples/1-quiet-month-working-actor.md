@@ -16,7 +16,7 @@ You are the narrator of a Hollywood career simulation. The engine is the authori
 packet: pkt-00006
 date: '1980-05-23'
 covers: 1980-04-25 .. 1980-05-23
-state_hash: 29443b2b1d75a5c2
+state_hash: ece2bd25d8582575
 protagonist:
   id: player
   name: Nora Vance
@@ -54,19 +54,19 @@ protagonist:
   relationship_status: single
   awards: []
 canon:
-- id: ev-1032
+- id: ev-1016
   date: '1980-04-25'
-  text: Your agency got you into the premiere of 'Where the Buffalo Roam', where you met Bill Murray, Peter Boyle.
+  text: You were invited to the premiere of 'Agenda of the Wolves' (your agency represents 1 of the film's cast),
+    where you met Louise Fletcher, Stacy Keach.
   provenance: simulated event in this timeline
-- id: ev-1062
+- id: ev-1044
   date: '1980-05-02'
   text: 'Donna Merrick checked in; they submitted you for 7 roles this past month; 0 got you in the room; the most
     common feedback on passes: ''they went with other actors''; they think a good acting class would sharpen your
     auditions.'
-- id: ev-1223
+- id: ev-1205
   date: '1980-05-16'
-  text: You caught up with Bill Murray at a Sunday barbecue in Studio City.
-  provenance: simulated event in this timeline
+  text: You caught up with Frank Palmer at a Sunday barbecue in Studio City.
 period_summary:
   overview: 4 week(s), 9 submission(s) by your agent, 0 call-in(s), 0 audition(s), 0 booking(s); net money -$2k.
   quiet_period: true
@@ -100,10 +100,10 @@ career_activity:
     your auditions.'
 your_work: []
 network:
-- name: Bill Murray
-  id: wd:Q29250
-  who: actor
-  how_you_know_them: met at the premiere of 'Where the Buffalo Roam'
+- name: Frank Palmer
+  id: gen-d-00020
+  who: director
+  how_you_know_them: worked together on a national commercial for a shampoo
   standing: cordial
   last_interaction: caught up at a Sunday barbecue in Studio City (1980-05-16)
 - name: Donna Merrick
@@ -112,12 +112,18 @@ network:
   how_you_know_them: monthly check-in call
   standing: cordial
   last_interaction: monthly check-in call (1980-05-02)
-- name: Peter Boyle
-  id: wd:Q315123
+- name: Louise Fletcher
+  id: wd:Q182372
   who: actor
-  how_you_know_them: met at the premiere of 'Where the Buffalo Roam'
+  how_you_know_them: met at the premiere of 'Agenda of the Wolves'
   standing: cordial
-  last_interaction: met at the premiere of 'Where the Buffalo Roam' (1980-04-25)
+  last_interaction: met at the premiere of 'Agenda of the Wolves' (1980-04-25)
+- name: Stacy Keach
+  id: wd:Q315090
+  who: actor
+  how_you_know_them: met at the premiere of 'Agenda of the Wolves'
+  standing: cordial
+  last_interaction: met at the premiere of 'Agenda of the Wolves' (1980-04-25)
 - name: Julie Hammond
   id: gen-a-00089
   who: actor
@@ -130,33 +136,27 @@ network:
   how_you_know_them: met at the premiere of 'Second Harbor at Coney Island'
   standing: cordial
   last_interaction: met at the premiere of 'Second Harbor at Coney Island' (1980-04-04)
-- name: Leslie Delaney
-  id: gen-ca-ind-7
-  who: independent casting director
-  how_you_know_them: read for a guest part on 'Rosie's Place West' (PBS)
-  standing: cordial
-  last_interaction: caught up at a charity softball game (1980-03-28)
-- name: Karen Allen
-  id: wd:Q229137
-  who: actor
-  how_you_know_them: met at the premiere of 'Cruising'
-  standing: cordial
-  last_interaction: caught up at a friend's opening night (1980-02-22)
 - name: Randy Maddox
   id: gen-a-00495
   who: actor
   how_you_know_them: worked together on a national commercial for a shampoo
   standing: cordial
   last_interaction: worked together on a national commercial for a shampoo (1980-02-08)
-- name: Frank Palmer
-  id: gen-d-00020
-  who: director
-  how_you_know_them: worked together on a national commercial for a shampoo
+- name: Cliff Osmond
+  id: wd:Q1101158
+  who: actor-director
+  how_you_know_them: met at the premiere of 'The Crawling House'
   standing: cordial
-  last_interaction: worked together on a national commercial for a shampoo (1980-02-08)
+  last_interaction: met at the premiere of 'The Crawling House' (1980-02-08)
+- name: Susan George
+  id: wd:Q237645
+  who: actor
+  how_you_know_them: met at the premiere of 'The Crawling House'
+  standing: cordial
+  last_interaction: met at the premiere of 'The Crawling House' (1980-02-08)
 open_threads:
 - 'Career goal: you want serious, respected work that gets noticed at awards time. So far in 1980: 67 submissions,
-  1 call-ins, 0 film role(s) booked.'
+  0 call-ins, 0 film role(s) booked.'
 people:
 - id: gen-ag-ag-sb-3
   name: Donna Merrick
@@ -174,7 +174,7 @@ people:
   bio: Agent at Starling-Barr Talent (fictional); a protective, old-school agent.
   persona:
     hometown: Dallas
-    signature: never eats before a performance
+    signature: takes every call from the car on the 405
     style: a protective, old-school agent
   relationship_status: single
   with_you:
@@ -185,73 +185,21 @@ people:
     - monthly check-in call (1980-04-04)
     - caught up over lunch with your agent (1980-04-11)
     - monthly check-in call (1980-05-02)
-- id: wd:Q29250
-  name: Bill Murray
-  age: 29
+- id: wd:Q1561461
+  name: Michael Mullins
+  age: 28
   profession: actor
-  public_profile: known mostly inside the industry
-  reputation: working actor in comedy
+  public_profile: unknown to the public
+  reputation: working actor in romance and thriller
   traits:
-  - generous with colleagues
-  motivation: driven mostly by financial security and big paydays, and also by fame and visibility
-  ambition: wants bigger paydays and financial security
-  bio: American actor and comedian; known for 'Mr. Mike's Mondo Video' (1979).
-  recent_work:
-  - '''Loose Shoes'' (1980, colead; this timeline)'
-  - '''Caddyshack'' (1980, featured; this timeline)'
-  - '''A Mother''s Secret'' (1980, tv_movie; this timeline)'
-  relationship_status: single
-  real_person: true
-  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
-    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
-    is this alternate timeline, not history.
-  with_you:
-    standing: cordial
-    status: acquainted
-    history:
-    - met at the premiere of 'Where the Buffalo Roam' (1980-04-25)
-    - caught up at a Sunday barbecue in Studio City (1980-05-16)
-- id: wd:Q315123
-  name: Peter Boyle
-  age: 44
-  profession: actor
-  public_profile: well known
-  reputation: character actor in action and comedy
-  traits:
-  - hard to read
+  - aloof
+  - outgoing
   motivation: driven mostly by financial security and big paydays, and also by respect and awards
   ambition: wants bigger paydays and financial security
-  bio: American actor (1935–2006); known for 'Hardcore' (1979).
+  bio: American actor (born 1951); known for 'The Pom Pom Girls' (1976).
   recent_work:
-  - '''a national commercial for a camera'' (1980, commercial; this timeline)'
-  - '''In God We Tru$t'' (1980, colead; this timeline)'
-  - '''Danger in Paradise'' (1980, tv_movie; this timeline)'
-  relationship_status: single
-  real_person: true
-  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
-    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
-    is this alternate timeline, not history.
-  with_you:
-    standing: cordial
-    status: acquainted
-    history:
-    - met at the premiere of 'Where the Buffalo Roam' (1980-04-25)
-- id: wd:Q517379
-  name: Bruno Kirby
-  age: 31
-  profession: actor
-  public_profile: known mostly inside the industry
-  reputation: working actor in comedy and thriller
-  traits:
-  - hungry
-  - cautious with choices
-  motivation: driven mostly by financial security and big paydays, and also by fame and visibility
-  ambition: wants bigger paydays and financial security
-  bio: American actor (1949–2006); known for 'Almost Summer' (1978).
-  recent_work:
-  - '''Borderline'' (1980, supporting; this timeline)'
-  - '''a national commercial for a family sedan'' (1980, commercial; this timeline)'
-  - '''The Last Letter'' (1980, tv_movie; this timeline)'
+  - '''The Pom Pom Girls'' (1976, supporting; documented)'
+  - '''Agenda of the Wolves'' (1980, supporting; this timeline)'
   relationship_status: single
   real_person: true
   note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
@@ -261,6 +209,81 @@ people:
     standing: cordial
     status: acquainted
     history: []
+- id: wd:Q182372
+  name: Louise Fletcher
+  age: 45
+  profession: actor
+  public_profile: well known
+  reputation: working actor in thriller and comedy
+  traits:
+  - unhurried about fame
+  - drawn to risky material
+  motivation: driven mostly by financial security and big paydays, and also by fame and visibility
+  ambition: wants bigger paydays and financial security
+  bio: American actress (born 1934); known for 'The Lady in Red' (1979); Academy Award winner.
+  recent_work:
+  - '''Valley County'' (1980, guest; this timeline)'
+  - '''Dakota Agency'' (1980, guest; this timeline)'
+  - '''Hart Case'' (1980, guest; this timeline)'
+  relationship_status: single
+  real_person: true
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
+  with_you:
+    standing: cordial
+    status: acquainted
+    history:
+    - met at the premiere of 'Agenda of the Wolves' (1980-04-25)
+- id: wd:Q315090
+  name: Stacy Keach
+  age: 38
+  profession: actor
+  public_profile: known mostly inside the industry
+  reputation: leading actor in action and thriller
+  traits:
+  - volatile
+  - aloof
+  - private
+  motivation: driven mostly by challenging, meaningful work, and also by respect and awards
+  ambition: wants challenging material over safe paychecks
+  bio: American actor (born 1941); known for 'The Killer Inside Me' (1976).
+  recent_work:
+  - '''The Long Riders'' (1980, colead; this timeline)'
+  - '''Agenda of the Wolves'' (1980, colead; this timeline)'
+  - '''Foolin'' Around'' (1980, featured; this timeline)'
+  relationship_status: single
+  real_person: true
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
+  with_you:
+    standing: cordial
+    status: acquainted
+    history:
+    - met at the premiere of 'Agenda of the Wolves' (1980-04-25)
+- id: gen-d-00020
+  name: Frank Palmer
+  age: 33
+  profession: director
+  public_profile: unknown to the public
+  reputation: director
+  traits:
+  - unflappable
+  - hard to read
+  motivation: driven mostly by challenging, meaningful work, and also by financial security and big paydays
+  ambition: wants challenging material over safe paychecks
+  bio: Director whose strongest suit is technical; unflappable, hard to read.
+  persona:
+    hometown: Kansas City
+    signature: never raises their voice on set
+  relationship_status: single
+  with_you:
+    standing: cordial
+    status: acquainted
+    history:
+    - worked together on a national commercial for a shampoo (1980-02-08)
+    - caught up at a Sunday barbecue in Studio City (1980-05-16)
 - id: gen-a-00089
   name: Julie Hammond
   age: 47
@@ -278,9 +301,9 @@ people:
     series: Bay City Precinct
     signature: never eats before a performance
   recent_work:
-  - '''Thunder Force'' (1971, supporting; backstory)'
   - '''Windows'' (1980, featured; this timeline)'
   - '''Second Harbor at Coney Island'' (1980, featured; this timeline)'
+  - '''Crystal Heights Story'' (1980, guest; this timeline)'
   relationship_status: married (spouse outside the film industry)
   with_you:
     standing: cordial
@@ -300,7 +323,7 @@ people:
   - unhurried about fame
   motivation: driven mostly by fame and visibility, and also by financial security and big paydays
   ambition: wants a breakout role and a recognisable name
-  bio: American actress; known for 'Shock Waves' (1977).
+  bio: American actress (born 1949); known for 'Shock Waves' (1977).
   recent_work:
   - '''Tell Me a Riddle'' (1980, supporting; this timeline)'
   - '''Second Harbor at Coney Island'' (1980, lead; this timeline)'
@@ -315,54 +338,6 @@ people:
     status: acquainted
     history:
     - met at the premiere of 'Second Harbor at Coney Island' (1980-04-04)
-- id: gen-ca-ind-7
-  name: Leslie Delaney
-  age: 50
-  profession: independent casting director
-  public_profile: unknown to the public
-  reputation: an unknown
-  traits:
-  - demanding
-  motivation: driven mostly by fame and visibility, and also by challenging, meaningful work
-  ambition: wants a breakout role and a recognisable name
-  bio: Casting director (an independent casting office); notoriously hard to impress.
-  persona:
-    hometown: London
-    style: notoriously hard to impress
-  relationship_status: married (spouse outside the film industry)
-  with_you:
-    standing: cordial
-    status: acquainted
-    history:
-    - read for a guest part on 'Rosie's Place West' (PBS) (1980-03-07)
-    - caught up at a charity softball game (1980-03-28)
-- id: wd:Q229137
-  name: Karen Allen
-  age: 28
-  profession: actor
-  public_profile: known mostly inside the industry
-  reputation: working actor in drama and action
-  traits:
-  - unflappable
-  - demanding
-  motivation: driven mostly by challenging, meaningful work, and also by respect and awards
-  ambition: wants challenging material over safe paychecks
-  bio: American actress; known for 'The Wanderers' (1979).
-  recent_work:
-  - '''A Small Circle of Friends'' (1980, colead; this timeline)'
-  - '''Raiders of the Lost Ark'' (1981, supporting; this timeline)'
-  - '''The Jazz Singer'' (1980, film_bit; this timeline)'
-  relationship_status: single
-  real_person: true
-  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
-    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
-    is this alternate timeline, not history.
-  with_you:
-    standing: cordial
-    status: acquainted
-    history:
-    - met at the premiere of 'Cruising' (1980-02-08)
-    - caught up at a friend's opening night (1980-02-22)
 - id: gen-a-00495
   name: Randy Maddox
   age: 61
@@ -390,6 +365,32 @@ people:
     status: acquainted
     history:
     - worked together on a national commercial for a shampoo (1980-02-08)
+- id: wd:Q237645
+  name: Susan George
+  age: 29
+  profession: actor
+  public_profile: known mostly inside the industry
+  reputation: working actor in action and drama
+  traits:
+  - aloof
+  - relentlessly prepared
+  motivation: driven mostly by fame and visibility, and also by financial security and big paydays
+  ambition: wants a breakout role and a recognisable name
+  bio: English actress (born 1950); known for 'A Small Town in Texas' (1976).
+  recent_work:
+  - '''The Crawling House'' (1980, colead; this timeline)'
+  - '''a national commercial for an airline'' (1980, commercial; this timeline)'
+  - '''Computercide'' (1981, colead; this timeline)'
+  relationship_status: single
+  real_person: true
+  note: Real person. Their career up to the start date is documented; their ambition is inferred from it; personality
+    traits are simulation characterisation, not biography. Everything they do with you, and anything marked 'simulated',
+    is this alternate timeline, not history.
+  with_you:
+    standing: cordial
+    status: acquainted
+    history:
+    - met at the premiere of 'The Crawling House' (1980-02-08)
 industry:
   box_office_chart:
   - 1. 'Night of the Juggler' (Columbia Pictures) — $6.6M this week, $11.5M total, week 2
@@ -407,7 +408,8 @@ industry:
     text: Metro-Goldwyn-Mayer greenlit 'The Moonlit Affair', a romance picture. A by-the-book architect falls for
       a stranger she meets on a train as the season ends.
   - date: '1980-05-16'
-    text: Terry Okafor will direct 'Silent Bridges' for Warner Bros..
+    text: James Benning will direct 'Silent Bridges' for Warner Bros..
+    provenance: fictional production
   - date: '1980-05-16'
     text: Warner Bros. greenlit 'Silent Bridges', a drama picture. A small-town lawyer fights to keep the family
       farm while the town turns against them.
@@ -450,18 +452,18 @@ continuity:
   earlier_key_moments:
   - '1980-01-04: Nora Vance begins their story in Hollywood.'
   recent_scenes_and_threads:
+  - '1980-02-08: with Cliff Osmond: met at the premiere of ''The Crawling House'''
+  - '1980-02-08: with Frank Palmer: worked together on a national commercial for a shampoo'
   - '1980-02-08: with Randy Maddox: worked together on a national commercial for a shampoo'
-  - '1980-02-22: with Karen Allen: caught up at a friend''s opening night'
-  - '1980-03-07: with Leslie Delaney: read for a guest part on ''Rosie''s Place West'' (PBS)'
-  - '1980-03-28: with Leslie Delaney: caught up at a charity softball game'
+  - '1980-02-08: with Susan George: met at the premiere of ''The Crawling House'''
   - '1980-04-04: with Brooke Adams: met at the premiere of ''Second Harbor at Coney Island'''
   - '1980-04-04: with Donna Merrick: monthly check-in call'
   - '1980-04-04: with Julie Hammond: met at the premiere of ''Second Harbor at Coney Island'''
   - '1980-04-11: with Donna Merrick: caught up over lunch with your agent'
-  - '1980-04-25: with Bill Murray: met at the premiere of ''Where the Buffalo Roam'''
-  - '1980-04-25: with Peter Boyle: met at the premiere of ''Where the Buffalo Roam'''
+  - '1980-04-25: with Louise Fletcher: met at the premiere of ''Agenda of the Wolves'''
+  - '1980-04-25: with Stacy Keach: met at the premiere of ''Agenda of the Wolves'''
   - '1980-05-02: with Donna Merrick: monthly check-in call'
-  - '1980-05-16: with Bill Murray: caught up at a Sunday barbecue in Studio City'
+  - '1980-05-16: with Frank Palmer: caught up at a Sunday barbecue in Studio City'
 era:
   year: 1980
   average_ticket_price: $2.69

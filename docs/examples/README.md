@@ -13,8 +13,15 @@ and what belongs to this simulated timeline:
 - people: `recent_work` entries tagged documented / this timeline; relationship status tagged
   documented or simulated; real-person cards say which traits are characterisation
 
-The packets were regenerated with these labels from the same seeds and choices.
-The stories are byte-for-byte the same simulation (identical state hashes).
+**Regenerated after the narrative-integrity pass.** The social, on-set and partnership rules changed, so
+these are new runs of the same careers with the same seeds and choices. The main arc (Claire's audition
+year and her *Second Harbor* offer) recurs, while incidental events differ. What's new:
+- each career's narrator notes belong to that career only (the earlier Claire packets wrongly carried Nora's note)
+- real people's bios contain only facts dated before the start (no death years or later careers)
+- the offer and production packets include the film's `story`: conflict, characters, arcs, relationships, beats,
+  key scenes, creative intent and Claire's own read of the script
+- documented partnerships are protected (Sondra Locke is "in a relationship with Clint Eastwood (documented)")
+- premiere invitations state why you were invited; on-set friction needs a concrete cause
 
 | File | Career | What it shows |
 |---|---|---|
@@ -22,7 +29,7 @@ The stories are byte-for-byte the same simulation (identical state hashes).
 | `2-busy-month-established-actor.md` | Claire Holloway, established actor (seed 1955), Sep 1980 | A **busy month**: dozens of submissions, TV and film call-ins with named casting directors, audition results and feedback, bookings with show, character, episode, director and co-stars. |
 | `3-lead-audition-decision.md` | Claire Holloway, Jul 1980 | Time stops for a **lead-role audition** (the default interrupt), with the film's premise, studio, director and casting director. |
 | `4-film-offer.md` | Claire Holloway, Feb 1981 | A **consequential opportunity**: after ~40 auditions, an offer to co-lead the Orion drama *Second Harbor*, with fee versus quote, shoot dates and location. |
-| `5-on-set-after-accepting.md` | Claire Holloway, Apr 1981 | Consequences: her production with its real and fictional cast, a clash on set with Sondra Locke, and a spark with a co-star that becomes her own decision. |
+| `5-on-set-after-accepting.md` | Claire Holloway, May 1981 | Consequences: her production with its real and fictional cast, the film's story profile, and the ordinary texture of a shoot. |
 
 ## How often do real opportunities come?
 Three test careers (about six simulated years in all) showed:

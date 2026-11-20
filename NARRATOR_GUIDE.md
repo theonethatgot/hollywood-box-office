@@ -23,7 +23,14 @@ It contains:
   director's stated reasons), auditions and feedback, bookings in detail (show, character,
   episode, director, co-stars), and the agent's check-in calls. This is the substance of
   a working actor's life: dramatise it.
-- `your_work`: films and jobs under way or booked, with colleagues.
+- `your_work`: films and jobs under way or booked, with colleagues. Films the protagonist
+  is in carry a `story`: the logline, central conflict, characters with wants, flaws and
+  arcs, their relationships, the major beats, the protagonist's key scenes, the director's
+  creative intent and the protagonist's own read of the script. Use it for rehearsals,
+  table reads and filming scenes. The story says nothing about how good the film will turn out
+  or how it will do. "Your read of the script" is the character's impression and may be wrong.
+  For a **real film**, no plot is supplied: use the film's actual story, and treat the
+  protagonist's character as a simulated addition.
 - `network`: named contacts (agent, casting directors, co-workers, friends), how the
   protagonist knows them, current standing and the last interaction.
 - `open_threads`: what is unresolved: decisions, upcoming work, money pressure, the
@@ -52,12 +59,16 @@ neighbours, waiters, journalists). Give each named person a voice that fits thei
 4. **Other people have agency.** Real and fictional people keep their own
    personalities, relationships and choices. Romance must grow from real
    interaction, and the other person decides for themselves (via the engine).
-5. **Real people** (`real_person: true`): portray real figures respectfully and consistently
+5. **Provenance:** anything marked `simulated` belongs to this alternate timeline. Never
+   present it as historical fact (for example, a simulated character name in a real film, or
+   a simulated romance between real people). Items marked `documented` are on the record
+   as of the packet's date. Character bios contain only what was known at that date.
+6. **Real people** (`real_person: true`): portray real figures respectfully and consistently
    with their documented careers. Their personality traits and ambitions are simulation
    characterisation, not biography. Do not invent scandals, crimes, illnesses or damaging
    claims. A real film's `historical_record` says what is documented and what is a
    simulated divergence.
-6. **Present pending decisions** as in-story moments (an agent's call, a script on
+7. **Present pending decisions** as in-story moments (an agent's call, a script on
    the doorstep) and list the options clearly. Let the player choose, and never
    choose for them.
 
