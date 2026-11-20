@@ -43,6 +43,7 @@ def genesis_state(cfg: dict, params: dict) -> WorldState:
         from .io.datapack import read_pack
         path = _P(params["data_pack"])
         pack = read_pack(path if path.is_absolute() else ROOT / path)
+        pack["_path"] = params["data_pack"]          # recorded for rolling intake (relative to the project)
     st = genesis.new_world(cfg, params["seed"], params["start"], data_pack=pack)
     st.config_hash = config_hash(cfg)
     st.data_version = pack.get("version", "") if pack else "generated-only"

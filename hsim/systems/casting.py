@@ -102,27 +102,39 @@ _INDEX: dict = {}
 
 def _actor_index(st: WorldState) -> dict:
     """Actors by gender, rebuilt once per simulated week (cheap pre-filter)."""
-    key = (st.date, len(st.people))
+    key = (st.date, len(st.people), len(st.actors()))
     if _INDEX.get("world") is not st or _INDEX.get("key") != key:   # identity check: ids can be reused
-        by = {}
+        by, by_age, ages = {}, {}, {}
         for p in st.actors():
             by.setdefault(p.gender, []).append(p)
+            a = ages[p.id] = age_on(p.birth, st.date)
+            by_age.setdefault(p.gender, {}).setdefault(a, []).append(p)
         _INDEX.clear()
-        _INDEX.update({"world": st, "key": key, "by_gender": by})
+        _INDEX.update({"world": st, "key": key, "by_gender": by, "by_age": by_age, "ages": ages})
     return _INDEX["by_gender"]
+
+
+def actor_ages(st: WorldState) -> dict:
+    _actor_index(st)
+    return _INDEX["ages"]
+
+
+def actors_aged(st: WorldState, gender: str, lo: int, hi: int) -> list:
+    """Actors of a gender aged lo..hi this week, in id order (the same order as a full scan)."""
+    _actor_index(st)
+    buckets = _INDEX["by_age"].get(gender, {})
+    out = [p for a in range(lo, hi + 1) for p in buckets.get(a, ())]
+    return sorted(out, key=lambda p: p.id)
 
 
 def candidate_pool(st: WorldState, cfg, proj: M.Project, role: M.Role) -> list:
     start, end = window(proj)
     cast_ids = {st.roles[r].cast_id for r in proj.role_ids if st.roles[r].cast_id}
     out = []
-    for p in _actor_index(st).get(role.gender, []):
-        if p.gender != role.gender or p.id in cast_ids or p.id in role.tried:
+    for p in actors_aged(st, role.gender, role.age_min - 6, role.age_max + 6):
+        if p.id in cast_ids or p.id in role.tried:
             continue
-        age = age_on(p.birth, st.date)
-        if not (role.age_min - 6 <= age <= role.age_max + 6):
-            continue
-        if not available(p, start, end):
+        if not available(p, start, end, ignore_project=proj.id):     # a hold on this very film doesn't block it
             continue
         out.append(p)
     return out
@@ -198,7 +210,12 @@ def quick_cast(st: WorldState, cfg, proj: M.Project) -> None:
             continue
         pool = candidate_pool(st, cfg, proj, role)
         if not pool:
+            if role.importance == "featured":
+                role.status = "filled locally"          # a day player hired on location
             continue
+        if role.importance == "featured" and len(pool) > 150:
+            # small parts in films already made: the best of a deterministic sample is enough
+            pool = sorted(pool, key=lambda p: R.unit(st.seed, "quick-sample", role.id, p.id))[:150]
         sw, rb = star_weight(cfg, proj, role, st.date), role_budget(cfg, proj, role)
         best = max(pool, key=lambda p: (casting_utility(st, cfg, proj, role, p, sw, rb), p.id))
         _cast(st, cfg, proj, role, best, fee=min(ask_fee(st, cfg, best, proj), role_budget(cfg, proj, role) * 1.3),
@@ -246,23 +263,41 @@ def _start_casting(st: WorldState, cfg, proj: M.Project, role: M.Role) -> None:
         # documented attachment: the producers go to the historical choice first
         person = st.people.get(role.intended)
         if person and person.active and not person.death and available(person, *window(proj), ignore_project=proj.id):
-            make_offer(st, cfg, proj, role, person, path="long-standing attachment")
-            return
-        role.tried.append(role.intended)
-        if person:
-            st.log("history_diverged", f"(Divergence) {person.name} is not available for '{proj.title}'; the role is being recast.",
-                   actors=[person.id], refs={"project": proj.id}, salience=1, public=person.fame > 0.1)
+            hc = cfg["history"]
+            if role.importance == "featured" or person.bankability >= hc["attached_offer_bankability"]:
+                make_offer(st, cfg, proj, role, person, path="long-standing attachment")
+                return
+            # the documented actor wasn't yet a draw: the part was won in the room, so it is auditioned,
+            # with the documented actor seen first and favoured (history is the baseline, not destiny)
+            if person.id not in role.requested:
+                role.requested.append(person.id)
+        else:
+            role.tried.append(role.intended)
+            if person:
+                st.log("history_diverged", f"(Divergence) {person.name} is not available for '{proj.title}'; the role is being recast.",
+                       actors=[person.id], refs={"project": proj.id}, salience=1, public=person.fame > 0.1)
     pool = candidate_pool(st, cfg, proj, role)
     if not pool:
         return
     sw, rb = star_weight(cfg, proj, role, st.date), role_budget(cfg, proj, role)
-    pool = [p for p in pool if fit(p, role, st.date) > 0.3]          # nobody considers a clear mismatch
+    favourite = role.intended if role.intended and role.intended in role.requested and role.intended not in role.tried else None
+    fits = {p.id: fit(p, role, st.date) for p in pool}
+    pool = [p for p in pool if fits[p.id] > 0.3 or p.id == favourite]   # nobody considers a clear mismatch
     if not pool:
         return
+    full_pool = pool                               # open calls still reach beyond the long list
+    cap = cfg["casting"]["consider_cap"]
+    if len(pool) > cap:
+        # a casting director's long list: the most plausible names by a quick read (type, draw,
+        # representation); people the CD agreed to see, and the documented favourite, always stay on it
+        keep = set(role.requested) | ({favourite} if favourite else set())
+        quick = {p.id: 45 * fits[p.id] + 0.6 * sw * p.bankability + agency_visibility(st, p)
+                 + 8 * R.gauss(st.seed, "long-list", role.id, p.id) for p in pool}
+        pool = sorted(pool, key=lambda p: (p.id not in keep, -quick[p.id], p.id))[:cap]
     utilities = {p.id: casting_utility(st, cfg, proj, role, p, sw, rb) for p in pool}
     ranked = sorted(pool, key=lambda p: (-utilities[p.id], p.id))
     top = ranked[0]
-    if role.importance == "lead" and top.bankability >= cfg["casting"]["direct_offer_bankability"]:
+    if role.importance == "lead" and top.bankability >= cfg["casting"]["direct_offer_bankability"] and not favourite:
         role.shortlist = [p.id for p in ranked[1:cfg["casting"]["shortlist_size"]]]
         make_offer(st, cfg, proj, role, top, path="direct offer")
         return
@@ -272,7 +307,7 @@ def _start_casting(st: WorldState, cfg, proj: M.Project, role: M.Role) -> None:
     if role.importance in ("supporting", "featured") or proj.budget < 3e6 * market.infl(cfg, year(st.date)):
         # open call: casting directors also see a few unknown / unrepresented actors
         chosen = {p.id for p in invite}
-        unknowns = [p for p in pool if p.id not in chosen and (p.agent_id is None or p.fame < 0.01)]
+        unknowns = [p for p in full_pool if p.id not in chosen and (p.agent_id is None or p.fame < 0.01)]
         scout = sorted(unknowns, key=lambda p: (-(0.5 * p.talent + 0.5 * p.presence
                                                   + 25 * R.gauss(st.seed, "open-call", role.id, p.id)), p.id))
         invite = invite + scout[:cfg["agents"]["open_call_slots"]]
@@ -282,7 +317,7 @@ def _start_casting(st: WorldState, cfg, proj: M.Project, role: M.Role) -> None:
     for p in invite:
         if p.controller == "player":
             _invite_player(st, cfg, proj, role, p)
-        elif _npc_wants_audition(st, cfg, proj, role, p):
+        elif p.id == favourite or _npc_wants_audition(st, cfg, proj, role, p):
             role.auditioners.append({"id": p.id, "prep": 0.0})
 
 
@@ -333,8 +368,9 @@ def _audition_choice(st, cfg, dec, choice, params) -> str:
 def audition_score(st, cfg, proj, role, p: M.Person, prep: float) -> float:
     g = R.stream(st.seed, "audition", role.id, p.id)
     form = g.normal(0, cfg["casting"]["audition_day_sd"]) * (1.2 - p.personality.get("discipline", 50) / 250)
+    documented = cfg["history"]["documented_audition_bonus"] if role.intended == p.id else 0.0
     return (0.45 * p.talent + 0.25 * p.craft + 0.20 * p.range.get(role.register, 40) + 0.10 * p.presence
-            + 12 * (fit(p, role, st.date) - 0.6) + prep + (p.energy - 70) / 10 + form)
+            + 12 * (fit(p, role, st.date) - 0.6) + prep + (p.energy - 70) / 10 + form + documented)
 
 
 def _tv_feedback(p: M.Person, winner: M.Person) -> str:

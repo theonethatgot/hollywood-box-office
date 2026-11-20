@@ -15,6 +15,11 @@ ticket_price:          # average US ticket, nominal $
   1988: 4.11
   1989: 3.97
   1990: 4.22
+  1991: 4.21
+  1992: 4.15
+  1993: 4.14
+  1994: 4.08
+  1995: 4.35
 
 admissions_m:          # annual US/Canada admissions, millions (calibration target)
   1975: 1033
@@ -29,6 +34,11 @@ admissions_m:          # annual US/Canada admissions, millions (calibration targ
   1988: 1085
   1989: 1263
   1990: 1189
+  1991: 1141
+  1992: 1173
+  1993: 1244
+  1994: 1292
+  1995: 1263
 
 cpi:                   # consumer price index (1982-84 = 100)
   1975: 53.8
@@ -43,24 +53,34 @@ cpi:                   # consumer price index (1982-84 = 100)
   1988: 118.3
   1989: 124.0
   1990: 130.7
+  1991: 136.2
+  1992: 140.3
+  1993: 144.5
+  1994: 148.2
+  1995: 152.4
 
 moviegoing_pop_m:      # population 12+ in US/Canada, millions
   1975: 200
   1980: 210
   1985: 220
   1990: 230
+  1995: 242
 
 max_wide_screens:      # largest plausible single-film screen count
   1975: 1200
   1980: 1800
   1985: 2200
   1990: 2700
+  1993: 2900
+  1995: 3100
 
 sag_weekly_scale:      # approx. SAG theatrical weekly minimum, nominal $
   1975: 785
   1980: 1158
   1985: 1500
   1990: 1800
+  1993: 1950
+  1995: 2080
 
 effective_tax_rate:    # simplified effective personal rate on taxable income
   1975: 0.40
@@ -68,9 +88,19 @@ effective_tax_rate:    # simplified effective personal rate on taxable income
   1982: 0.36
   1987: 0.30
   1990: 0.28
+  1993: 0.29
 
 international_ratio:   # intl gross / domestic gross for a typical US release
   1975: 0.65
   1980: 0.70
   1985: 0.75
   1990: 0.85
+  1993: 0.95
+  1995: 1.05
+
+ancillary_ratio:       # home video, pay-TV and TV sales relative to domestic gross (approximate; verify).
+  1975: 0.25           # Home video grew from almost nothing (1980) to rivalling theatrical (late 1980s).
+  1980: 0.32
+  1985: 0.65
+  1990: 0.95
+  1995: 1.05

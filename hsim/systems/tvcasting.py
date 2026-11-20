@@ -63,21 +63,40 @@ def _cast_part(st, cfg, show, k, by_gender) -> None:
     cd = st.people.get(cd_id) if cd_id else None
     regulars = set(show.regulars)
 
+    fits, knowns = {}, {}                       # memo: each is needed several times per candidate
+
+    from .casting import actor_ages
+    ages = actor_ages(st)
+
     def tv_fit(p):
-        age = age_on(p.birth, st.date)
-        age_f = max(0.0, 1 - abs(age - center) / 9)
-        return age_f * (0.55 + 0.45 * p.range.get(reg, 40) / 100)
+        v = fits.get(p.id)
+        if v is None:
+            age = ages.get(p.id) if p.id in ages else age_on(p.birth, st.date)
+            age_f = max(0.0, 1 - abs(age - center) / 9)
+            v = fits[p.id] = age_f * (0.55 + 0.45 * p.range.get(reg, 40) / 100)
+        return v
 
     def known_u(p):
-        rel = st.rel(cd_id, p.id, create=False) if cd_id else None
-        return (0.25 * p.critical_rep + 0.25 * p.craft + 30 * tv_fit(p) + 40 * min(0.5, p.fame) + agency_visibility(st, p)
-                + (rel.affinity / 3 if rel else 0) + 10 * R.gauss(st.seed, "tv-known", show.id, st.date, k, p.id))
+        v = knowns.get(p.id)
+        if v is None:
+            rel = st.rel(cd_id, p.id, create=False) if cd_id else None
+            v = knowns[p.id] = (0.25 * p.critical_rep + 0.25 * p.craft + 30 * tv_fit(p) + 40 * min(0.5, p.fame)
+                                + agency_visibility(st, p) + (rel.affinity / 3 if rel else 0)
+                                + 10 * R.gauss(st.seed, "tv-known", show.id, st.date, k, p.id))
+        return v
 
     from .casting import available
-    pool = [p for p in by_gender.get(gender, []) if p.id not in regulars and tv_fit(p) > 0.35 and p.bankability < 60
-            and not (p.directives or {}).get("no_tv") and available(p, start, end)]
+    lo, hi = center - 9, center + 9                 # tv_fit is zero outside this age band
+    pool = [p for p in by_gender.get(gender, []) if lo < ages.get(p.id, -1) < hi and p.id not in regulars
+            and tv_fit(p) > 0.35 and p.bankability < 60 and not (p.directives or {}).get("no_tv")
+            and available(p, start, end)]
     if not pool:
         return
+    cap = cfg["tv"]["consider_cap"]
+    if len(pool) > cap:                              # the TV casting director's long list (same rule for all)
+        quick = {p.id: 30 * tv_fit(p) + 40 * min(0.5, p.fame) + 0.25 * p.craft + agency_visibility(st, p)
+                 + 8 * R.gauss(st.seed, "tv-long-list", show.id, st.date, k, p.id) for p in pool}
+        pool = sorted(pool, key=lambda p: (-quick[p.id], p.id))[:cap]
     known = sorted(pool, key=lambda p: (-known_u(p), p.id))[:cfg["tv"]["cd_known_picks"]]
     known_ids = {p.id for p in known}
     submitted = []

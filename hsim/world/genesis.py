@@ -336,6 +336,36 @@ def schedule_from_greenlight(cfg, p: M.Project, start: str, g) -> None:
 
 
 # ------------------------------------------------------------------- world ---
+def era_number(v, yr: int) -> float:
+    """A config value that is either a number or {year: value}, interpolated between years."""
+    if not isinstance(v, dict):
+        return float(v)
+    pts = sorted((int(k), float(x)) for k, x in v.items())
+    if yr <= pts[0][0]:
+        return pts[0][1]
+    for (y0, v0), (y1, v1) in zip(pts, pts[1:]):
+        if yr <= y1:
+            return v0 + (v1 - v0) * (yr - y0) / (y1 - y0)
+    return pts[-1][1]
+
+
+def studio_active(spec: dict, yr: int) -> bool:
+    y0, y1 = spec.get("years", [0, 9999])
+    return y0 <= yr <= y1
+
+
+def make_studio(cfg: dict, seed: int, s: dict, yr: int) -> M.Studio:
+    g = R.stream(seed, "studio", s["id"])
+    return M.Studio(
+        id=s["id"], name=s["name"], tier=s["tier"], cash=500e6 if s["tier"] == "major" else 80e6,
+        slate_per_year=era_number(s["slate"], yr), budget_median=era_number(s["budget_median"], yr),
+        risk_appetite=s["risk"], marketing_eff=float(np.clip(g.normal(1.0, 0.1), 0.7, 1.3)),
+        exec_taste=float(clamp(g.normal(50, 15))), historical=True,
+        genre_weights={x: float(np.clip(g.normal(1.0, 0.15), 0.6, 1.4)) * cfg.get("studio_genres", {}).get(s["id"], {}).get(x, 1.0)
+                       for x in M.GENRES},
+        provenance={"source": "config", "note": "real studio name; attributes are model estimates"})
+
+
 def new_world(cfg: dict, seed: int, start: str, data_pack: dict | None = None) -> WorldState:
     from ..systems import casting, boxoffice, release   # local import: avoid cycles
 
@@ -343,15 +373,8 @@ def new_world(cfg: dict, seed: int, start: str, data_pack: dict | None = None) -
     st = WorldState(seed=seed, date=start, start_date=start)
     st.orders = default_orders()
     for s in cfg["studios"]:
-        g = R.stream(seed, "studio", s["id"])
-        st.studios[s["id"]] = M.Studio(
-            id=s["id"], name=s["name"], tier=s["tier"], cash=500e6 if s["tier"] == "major" else 80e6,
-            slate_per_year=s["slate"], budget_median=s["budget_median"], risk_appetite=s["risk"],
-            marketing_eff=float(np.clip(g.normal(1.0, 0.1), 0.7, 1.3)),
-            exec_taste=float(clamp(g.normal(50, 15))), historical=True,
-            genre_weights={x: float(np.clip(g.normal(1.0, 0.15), 0.6, 1.4)) * cfg.get("studio_genres", {}).get(s["id"], {}).get(x, 1.0)
-                           for x in M.GENRES},
-            provenance={"source": "config", "note": "real studio name; attributes are model estimates"})
+        if studio_active(s, year(start)):
+            st.studios[s["id"]] = make_studio(cfg, seed, s, year(start))
     for a in cfg["agencies"]:
         st.agencies[a["id"]] = M.Agency(id=a["id"], name=a["name"], tier=a["tier"], hustle=a["hustle"],
                                         negotiation=a["negotiation"], info_quality=a["info"])
@@ -418,7 +441,7 @@ def new_world(cfg: dict, seed: int, start: str, data_pack: dict | None = None) -
     return st
 
 
-def assign_agents(st: WorldState, cfg: dict | None = None, yearly: bool = False) -> None:
+def assign_agents(st: WorldState, cfg: dict | None = None, yearly: bool = False, only: set | None = None) -> None:
     """Represented actors keep their agency. Credited actors are matched to an agency
     tier by their standing; uncredited actors are signed only with some probability
     (agencies scout showcases and student films). The protagonist is never signed
@@ -426,7 +449,7 @@ def assign_agents(st: WorldState, cfg: dict | None = None, yearly: bool = False)
     base = (cfg or {}).get("agents", {}).get("sign_newcomer_yearly", 0.3)
     by_tier = {t: [a for a in sorted(st.agencies.values(), key=lambda a: a.id) if a.tier == t] for t in (1, 2, 3)}
     for pid, p in sorted(st.people.items()):
-        if p.agent_id or "actor" not in p.roles or p.death or not p.active:
+        if p.agent_id or "actor" not in p.roles or p.death or not p.active or (only is not None and pid not in only):
             continue
         g = R.stream(st.seed, "agent-assign", pid, st.date)
         has_credits = any(c.get("kind") in ("film", "prior") for c in p.credits)

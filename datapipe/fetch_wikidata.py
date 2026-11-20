@@ -231,6 +231,7 @@ class Ingest:
         done = set() if relist else self.store.years_done()
         missing = [y for y in range(y0, y1 + 1) if y not in done]
         spans = [(missing[k], missing[min(k + 4, len(missing) - 1)]) for k in range(0, len(missing), 5)][::-1]
+        fails = {}
         while spans:
             a, b = spans.pop()
             try:
@@ -239,8 +240,13 @@ class Ingest:
                     rows += self.sparql(FILMS.format(cls=cls, y0=a, y1=b), "film_list")
                     excluded += self.sparql(EXCLUDE.format(cls=cls, y0=a, y1=b), "film_list")
             except QueryTooHeavy:
-                if a == b:
-                    raise
+                if a == b:                                      # one year: the endpoint is flaky, retry
+                    fails[a] = fails.get(a, 0) + 1
+                    if fails[a] > 4:
+                        raise
+                    time.sleep(10 * fails[a])
+                    spans.append((a, b))
+                    continue
                 self.client.stat("film_list", "split_chunks")
                 spans += [(y, y) for y in range(b, a - 1, -1)]          # one year per query
                 continue

@@ -16,6 +16,8 @@ STOP_EVENT_TYPES = {
 def tick(st: WorldState, cfg: dict) -> None:
     """Simulate the week beginning on st.date (a Friday), then move to next Friday."""
     decisions.expire(st, cfg)
+    from ..world.historical import intake
+    intake(st, cfg)
     studios.step(st, cfg)
     casting.step(st, cfg)
     tvcasting.step(st, cfg)

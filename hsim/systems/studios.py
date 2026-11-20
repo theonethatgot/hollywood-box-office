@@ -7,7 +7,31 @@ from ..core.util import add_weeks
 from ..world import genesis
 
 
+def roster(st: WorldState, cfg: dict) -> None:
+    """First tick of each year: studios founded this year open, defunct ones stop greenlighting,
+    and slates and budgets follow the era settings."""
+    from ..core.util import year
+    yr = year(st.date)
+    if st.market.get("roster_year") == yr:
+        return
+    st.market["roster_year"] = yr
+    for spec in cfg["studios"]:
+        s = st.studios.get(spec["id"])
+        if s is None:
+            if genesis.studio_active(spec, yr):
+                st.studios[spec["id"]] = genesis.make_studio(cfg, st.seed, spec, yr)
+                st.log("studio_founded", f"{spec['name']} is now releasing films.", salience=1, public=True)
+            continue
+        if genesis.studio_active(spec, yr):
+            s.slate_per_year = genesis.era_number(spec["slate"], yr)
+            s.budget_median = genesis.era_number(spec["budget_median"], yr)
+        elif s.slate_per_year > 0:
+            s.slate_per_year = 0
+            st.log("studio_closed", f"{s.name} has stopped developing new films.", salience=1, public=True)
+
+
 def step(st: WorldState, cfg: dict) -> None:
+    roster(st, cfg)
     for sid, studio in sorted(st.studios.items()):
         g = R.stream(st.seed, "greenlight", sid, st.date)
         rate = studio.slate_per_year / 52

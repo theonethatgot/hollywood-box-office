@@ -18,18 +18,23 @@ archetypes:                        # starting career positions for generated act
   notable:  {share: 0.13, fame: [0.05, 0.30], bank: [20, 55], credits: [8, 30], quote: [80000, 400000]}
   star:     {share: 0.04, fame: [0.30, 0.80], bank: [55, 92], credits: [12, 40], quote: [400000, 3000000]}
 
-studios:                            # historical studios active in 1980 (names only; numbers are model inputs)
-  - {id: st-par, name: Paramount Pictures, tier: major, slate: 15, budget_median: 9.0, risk: 55}
-  - {id: st-uni, name: Universal Pictures, tier: major, slate: 16, budget_median: 9.0, risk: 50}
-  - {id: st-wb,  name: Warner Bros., tier: major, slate: 16, budget_median: 9.5, risk: 55}
-  - {id: st-col, name: Columbia Pictures, tier: major, slate: 14, budget_median: 8.5, risk: 50}
-  - {id: st-fox, name: 20th Century Fox, tier: major, slate: 13, budget_median: 9.0, risk: 50}
-  - {id: st-ua,  name: United Artists, tier: major, slate: 9, budget_median: 8.5, risk: 60}
-  - {id: st-mgm, name: Metro-Goldwyn-Mayer, tier: major, slate: 7, budget_median: 9.0, risk: 45}
-  - {id: st-bv,  name: Buena Vista (Disney), tier: major, slate: 6, budget_median: 8.0, risk: 35}
-  - {id: st-ori, name: Orion Pictures, tier: mini, slate: 9, budget_median: 7.5, risk: 60}
-  - {id: st-avc, name: AVCO Embassy Pictures, tier: mini, slate: 9, budget_median: 4.0, risk: 65}
-  - {id: st-nw,  name: New World Pictures, tier: mini, slate: 10, budget_median: 1.5, risk: 70}
+studios:                            # historical studios by era (names only; numbers are model inputs)
+  # slate = films greenlit per year; budget_median = $M in 1980 dollars. A number or {year: value}
+  # (interpolated). years = [first, last] year the studio greenlights/distributes (inclusive).
+  - {id: st-par, name: Paramount Pictures, tier: major, slate: {1980: 15, 1990: 14}, budget_median: {1980: 9.0, 1990: 15.0}, risk: 55}
+  - {id: st-uni, name: Universal Pictures, tier: major, slate: {1980: 16, 1990: 15}, budget_median: {1980: 9.0, 1990: 15.0}, risk: 50}
+  - {id: st-wb,  name: Warner Bros., tier: major, slate: {1980: 16, 1990: 18}, budget_median: {1980: 9.5, 1990: 16.5}, risk: 55}
+  - {id: st-col, name: Columbia Pictures, tier: major, slate: {1980: 14, 1990: 11}, budget_median: {1980: 8.5, 1990: 15.0}, risk: 50}
+  - {id: st-tri, name: TriStar Pictures, tier: major, slate: {1984: 8, 1990: 13}, budget_median: {1984: 10.0, 1990: 14.0}, risk: 55, years: [1984, 2100]}
+  - {id: st-fox, name: 20th Century Fox, tier: major, slate: {1980: 13, 1990: 11}, budget_median: {1980: 9.0, 1990: 16.0}, risk: 50}
+  - {id: st-ua,  name: United Artists, tier: major, slate: {1980: 9, 1985: 5, 1990: 3}, budget_median: {1980: 8.5, 1990: 10.0}, risk: 60}
+  - {id: st-mgm, name: Metro-Goldwyn-Mayer, tier: major, slate: 7, budget_median: {1980: 9.0, 1990: 12.0}, risk: 45}
+  - {id: st-bv,  name: Buena Vista (Disney), tier: major, slate: {1980: 6, 1985: 10, 1990: 20}, budget_median: {1980: 8.0, 1990: 13.0}, risk: 35}
+  - {id: st-ori, name: Orion Pictures, tier: mini, slate: {1980: 9, 1990: 10, 1991: 5}, budget_median: {1980: 7.5, 1990: 10.0}, risk: 60, years: [1978, 1992]}
+  - {id: st-avc, name: AVCO Embassy Pictures, tier: mini, slate: 9, budget_median: 4.0, risk: 65, years: [1975, 1986]}
+  - {id: st-nw,  name: New World Pictures, tier: mini, slate: 10, budget_median: 1.5, risk: 70, years: [1970, 1989]}
+  - {id: st-nl,  name: New Line Cinema, tier: mini, slate: {1980: 3, 1985: 6, 1990: 12}, budget_median: {1980: 1.5, 1990: 5.0}, risk: 70, years: [1967, 2100]}
+  - {id: st-mir, name: Miramax Films, tier: mini, slate: {1980: 2, 1985: 4, 1990: 10}, budget_median: {1980: 0.8, 1990: 2.0}, risk: 70, years: [1979, 2100]}
   - {id: st-ind, name: Independent distributors, tier: mini, slate: 0, budget_median: 2.5, risk: 70}
 
 studio_genres:                      # each studio's slate identity (relative weights; others default 1.0)
@@ -44,6 +49,9 @@ studio_genres:                      # each studio's slate identity (relative wei
   st-ori: {drama: 1.7, thriller: 1.4, comedy: 1.2, family: 0.4}
   st-avc: {horror: 2.0, thriller: 1.6, scifi: 1.2, family: 0.3}
   st-nw:  {horror: 2.5, action: 1.8, scifi: 1.5, drama: 0.4, family: 0.3, romance: 0.4}
+  st-tri: {action: 1.4, comedy: 1.3, drama: 1.2, thriller: 1.2}
+  st-nl:  {horror: 2.2, comedy: 1.5, family: 0.9, drama: 0.7}
+  st-mir: {drama: 2.2, thriller: 1.4, romance: 1.2, action: 0.4, family: 0.3, scifi: 0.4}
 
 agencies:
   - {id: ag-wma, name: William Morris Agency, tier: 1, hustle: 60, negotiation: 70, info: 70}
@@ -78,6 +86,7 @@ casting:
   shortlist_size: 8
   audition_size: 10
   direct_offer_bankability: 55     # leads above this get direct offers
+  consider_cap: 250                # a casting director's long list per part (cheap pre-read of type, draw, representation)
   star_weight_by_role: {lead: 1.0, colead: 0.6, supporting: 0.15, featured: 0.03}
   budget_star_pivot_m: 6.0         # budgets ($M, 1980 dollars) above this want stars for leads
   talent_obs_noise: 10
@@ -190,6 +199,7 @@ tv:
   shows: 48                        # fictional series on real networks (hsim/world/tv.py)
   guest_parts_per_week: 3          # up to this many guest parts per show per week, in season (Jul-Mar)
   cd_known_picks: 2
+  consider_cap: 200                # long list per guest part
   audition_size: 6
   submit_base: 0.6
 
@@ -239,7 +249,7 @@ personal:
   fictional_mortality_gompertz: {a: 0.00002, b: 0.085}
 
 history:                            # historical snapshot loader (hsim/world/historical.py)
-  default_pack: data/history/wikidata_1975_1989.json
+  default_pack: data/history/wikidata_1965_1992.json
   lookback_years: 5               # credits in this window put a person in the world
   horizon_months: 24              # real films released within this window become pipeline projects
   in_release_weeks: 9             # real films released this recently are in theatres at start
@@ -254,6 +264,9 @@ history:                            # historical snapshot loader (hsim/world/his
   marriage_base_rate_if_never_met: 0.3
   sequel_hook_bonus: 12
   intended_role_bonus: 0.6        # an actor's documented pull toward a project they historically made
+  attached_offer_bankability: 35  # documented actors at least this much of a draw get the part offered directly;
+                                  # below it the part is auditioned, the documented actor favoured
+  documented_audition_bonus: 8    # their edge in that room (the documented casting usually holds, not always)
 
 advance:
   max_weeks_per_call: 520

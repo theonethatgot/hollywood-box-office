@@ -196,8 +196,9 @@ def _make_cd(st, key, employer) -> None:
 def casting_director_for(st: WorldState, proj: M.Project) -> str | None:
     if proj.casting_director_id:
         return proj.casting_director_id
-    own = sorted(pid for pid, p in st.people.items() if "casting_director" in p.roles and p.employer == proj.studio_id)
-    pool = own or sorted(pid for pid, p in st.people.items() if "casting_director" in p.roles and p.employer == "independent")
+    cds = st._cached("casting_directors", lambda p: "casting_director" in p.roles)
+    own = [p.id for p in cds if p.employer == proj.studio_id]
+    pool = own or [p.id for p in cds if p.employer == "independent"]
     if not pool:
         return None
     proj.casting_director_id = pool[int(R.unit(st.seed, "cd-assign", proj.id) * len(pool))]

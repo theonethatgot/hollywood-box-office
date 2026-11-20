@@ -683,8 +683,19 @@ def _decision(d, st=None) -> dict:
 def _era(st, cfg) -> dict:
     from ..systems import market
     return {"year": int(st.date[:4]), "average_ticket_price": f"${market.ticket_price(cfg, st.date):.2f}",
-            "note": "The blockbuster era is a few years old; theatrical release dominates and home video is small but growing fast."
-            if st.date < "1983" else "Home video is becoming a real second market."}
+            "note": ERA_NOTES[max(y for y in ERA_NOTES if y <= int(st.date[:4]))]}
+
+
+ERA_NOTES = {
+    1900: "Theatrical release is the business.",
+    1980: "The blockbuster era is a few years old; theatrical release dominates and home video is small but growing fast.",
+    1983: "Home video is becoming a real second market.",
+    1987: "Home video now earns studios about as much as theatrical; cable (HBO, Showtime) buys films too.",
+    1990: ("Home video rivals the box office; multiplexes are spreading; Sony owns Columbia and TriStar; independents "
+           "like Miramax and New Line are breaking out; Orion is struggling."),
+    1992: ("Home video rivals the box office; multiplexes are spreading; independents like Miramax and New Line are "
+           "breaking out; Orion has gone bankrupt."),
+}
 
 
 def _continuity(st, cfg) -> dict:
