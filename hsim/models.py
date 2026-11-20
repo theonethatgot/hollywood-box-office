@@ -68,6 +68,7 @@ class Person:
     employer: str | None = None                      # agency / studio id for agents, casting directors
     agent_person_id: str | None = None               # the named agent who represents this actor
     track: dict = field(default_factory=dict)        # register -> [auditions, near the top]: what agents learn
+    directives: dict = field(default_factory=dict)   # career repositioning the client asked their agent for
 
 
 @dataclass
@@ -135,6 +136,7 @@ class Role:
     auditioners: list = field(default_factory=list)
     performance: float | None = None  # HIDDEN until reviews
     intended: str | None = None       # historical attachment (a prior, not a guarantee)
+    requested: list = field(default_factory=list)    # actors the CD agreed to see after an agent's push
     name_documented: bool = False     # character name from records (else generated)
 
 

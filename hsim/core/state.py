@@ -42,7 +42,9 @@ class WorldState:
     hist_events: dict = field(default_factory=dict)
     shows: dict = field(default_factory=dict)
     orders: dict = field(default_factory=dict)       # player's standing orders
-    notes: list = field(default_factory=list)        # narrator notes (non-mechanical canon)
+    notes: list = field(default_factory=list)        # narrator notes (legacy; see `narrative`)
+    narrative: list = field(default_factory=list)    # narrative canon: persisted, non-mechanical facts
+    initiatives: dict = field(default_factory=dict)  # proposed consequential canon under adjudication
     rulings: list = field(default_factory=list)      # adjudication results not yet packeted
     delegated: list = field(default_factory=list)    # delegated choices not yet packeted
     packet_id: str | None = None                     # latest exported packet

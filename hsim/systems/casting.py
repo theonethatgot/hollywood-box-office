@@ -216,6 +216,8 @@ def _cast(st: WorldState, cfg, proj: M.Project, role: M.Role, p: M.Person, fee: 
                       "genre": proj.genre, "kind": "film"})
     if proj.director_id:
         st.rel(proj.director_id, p.id)
+    from .agents import placement_goodwill
+    placement_goodwill(st, cfg, proj, p)
     if not quiet:
         notable = p.fame > 0.08 or p.controller == "player" or p.tier == "A"
         st.log("cast", f"{p.name} was cast as {role.name} ({role.importance}) in '{proj.title}' "

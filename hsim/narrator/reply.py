@@ -27,7 +27,9 @@ def extract(text: str) -> dict:
     data.setdefault("decisions", [])
     data.setdefault("proposals", [])
     data.setdefault("notes", [])
-    for k in ("decisions", "proposals", "notes"):
+    data.setdefault("narrative", [])
+    data.setdefault("initiatives", [])
+    for k in ("decisions", "proposals", "notes", "narrative", "initiatives"):
         if data[k] is None:
             data[k] = []
         if not isinstance(data[k], list):

@@ -75,14 +75,14 @@ def _cast_part(st, cfg, show, k, by_gender) -> None:
 
     from .casting import available
     pool = [p for p in by_gender.get(gender, []) if p.id not in regulars and tv_fit(p) > 0.35 and p.bankability < 60
-            and available(p, start, end)]
+            and not (p.directives or {}).get("no_tv") and available(p, start, end)]
     if not pool:
         return
     known = sorted(pool, key=lambda p: (-known_u(p), p.id))[:cfg["tv"]["cd_known_picks"]]
     known_ids = {p.id for p in known}
     submitted = []
     for p in pool:
-        if p.id in known_ids or not p.agent_id:
+        if p.id in known_ids or not p.agent_id or (p.directives and p.directives.get("no_tv")):
             continue
         from .agents import niche_factor
         prob = cfg["tv"]["submit_base"] * (0.4 + agent_hustle(st, p) / 100) * (tv_fit(p) - 0.3) * 2 * \

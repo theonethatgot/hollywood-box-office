@@ -194,8 +194,6 @@ tv:
   submit_base: 0.6
 
 social:
-  player_weekly: 0.22              # chance per week of an ordinary encounter with someone you know
-  contacts_for_full_social_life: 6 # fewer real connections means proportionally fewer encounters
   premiere_invite_weekly: 0.06
   npc_friend_weekly: 0.03
 
@@ -211,6 +209,14 @@ agents:
   submit_base: 0.9                 # agent submission propensity (scaled by hustle, fit, strategy)
   sign_newcomer_yearly: 0.30       # base chance an unrepresented actor gets signed each year
   open_call_slots: 2               # unrepresented/unknown actors seen per supporting-role audition
+  plans:                           # monthly: where each agent spends their calls (systems/agents.plan_month)
+    focus_clients: 3               # the clients whose careers pay the agent most get the calls
+    connection_affinity: 10        # any client a film's director already rates this well is pitched too
+    min_fit: 0.55                  # agents don't push clients for parts they clearly don't fit
+    placement_goodwill: 1.5        # agent-CD credibility gained per client cast
+    failed_push_cost: 0.5          # ...and lost when they push a client the CD won't see
+    options_considered: 9          # the agent reads the room for their most attractive options
+    min_odds: 0.25                 # and doesn't spend a call on a long shot
 
 awards:
   nomination_week: 7               # ISO week of nominations announcement

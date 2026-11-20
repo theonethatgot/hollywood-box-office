@@ -1,11 +1,10 @@
 """Ordinary social life in the industry.
 
-Relationships deepen (or fade) through everyday contact, not only through work:
-lunches with an agent, running into a former co-star, a premiere party. Every
-encounter is with someone the person genuinely knows or is plausibly placed near
-(the cast of a film actually premiering this week). Most weeks nothing happens;
-quiet stretches are normal. Encounters feed relationships and can create the
-contact that romance needs. NPC friendships follow the same rule.
+Relationships deepen (or fade) through contact, not only through work. The engine
+no longer invents the protagonist's casual social life (that produced arbitrary
+encounters): the narrator proposes it as a `social` / `meet` initiative, which is
+adjudicated (systems/initiatives.py). The engine keeps what has a cause: premiere
+invitations with a stated reason, and NPC friendships that already exist.
 """
 from __future__ import annotations
 
@@ -13,15 +12,8 @@ from ..core import rng as R
 from ..core.state import WorldState
 from ..core.util import add_days, clamp
 
-VENUES = ["over lunch at Musso & Frank Grill", "at a party in Laurel Canyon", "at the Formosa Café",
-          "between classes at an acting workshop", "at a Sunday barbecue in Studio City", "at Dan Tana's",
-          "at a screening at the Directors Guild", "at the Improv on Melrose", "at a friend's opening night",
-          "in the waiting room at a casting office", "on the beach in Santa Monica", "at a charity softball game"]
-
-
 def step(st: WorldState, cfg: dict) -> None:
     sc = cfg["social"]
-    _player_encounters(st, cfg, sc)
     _premieres(st, cfg, sc)
     _npc_friendships(st, cfg, sc)
 
@@ -34,48 +26,6 @@ def _known(st, pid, min_affinity=0.0):
             if other in st.people and not st.people[other].death:
                 out.append((other, r))
     return sorted(out, key=lambda x: x[0])
-
-
-def _player_encounters(st, cfg, sc) -> None:
-    p = st.player
-    if not p:
-        return
-    def established(other_id, r):
-        """Catch-ups need a real connection: worked together, genuine goodwill, or your own agent."""
-        worked = any("worked together" in h["text"] or "clashed on the set" in h["text"] or "rehears" in h["text"]
-                     for h in r.history) or r.contact_weeks >= 2
-        return "agent" in st.people[other_id].roles or worked or r.affinity >= 8
-    contacts = [(o, r) for o, r in _known(st, p.id, min_affinity=-5) if established(o, r)]
-    if not contacts:
-        return
-    sociability = 0.5 + p.personality.get("openness", 50) / 100
-    breadth = min(1.0, len(contacts) / sc["contacts_for_full_social_life"])    # fewer friends, fewer outings
-    if R.unit(st.seed, "social-week", p.id, st.date) > sc["player_weekly"] * sociability * breadth:
-        return
-    def access(other):            # a working actor doesn't casually socialise with stars they met once
-        gap = st.people[other].fame - p.fame
-        return 1.0 if gap < 0.1 else max(0.05, 1 - gap * 2.5)
-    weights = [max(0.5, r.affinity + 10) * (2.0 if "agent" in st.people[o].roles else 1.0) * access(o)
-               for o, r in contacts]
-    u = R.unit(st.seed, "social-who", p.id, st.date) * sum(weights)
-    acc = 0.0
-    for (other_id, r), w in zip(contacts, weights):
-        acc += w
-        if u <= acc:
-            break
-    other = st.people[other_id]
-    venue = VENUES[int(R.unit(st.seed, "social-venue", p.id, st.date) * len(VENUES))]
-    if "agent" in other.roles:
-        venue = "over lunch with your agent"
-    warmth = (p.personality.get("warmth", 50) + other.personality.get("warmth", 50)) / 200
-    delta = round(1 + 3 * warmth * R.unit(st.seed, "social-delta", p.id, st.date), 1)
-    r.affinity = round(clamp(r.affinity + delta, -100, 100), 2)
-    r.contact_weeks += 1
-    r.history.append({"date": st.date, "text": f"caught up {venue}", "delta": delta})
-    st.market.setdefault("contacts", []).append([r.a, r.b, "social"])
-    st.log("social", f"You caught up with {other.name} {venue}." if "agent" not in other.roles
-           else f"You had lunch with your agent, {other.name}.",
-           actors=[p.id, other.id], salience=1, public=False)
 
 
 def _premieres(st, cfg, sc) -> None:

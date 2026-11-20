@@ -7,6 +7,7 @@ genesis parameters plus the command log reproduces the state exactly.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from pathlib import Path
 
@@ -74,6 +75,8 @@ def export_packet(st: WorldState, cfg: dict) -> dict:
     pid = st.new_id("pkt")
     st.packet_id = pid
     pk = PKT.build(st, cfg, pid)
+    if st.player:
+        st.market["standing_mark"] = PKT.standing(st)
     st.rulings, st.delegated = [], []
     st.packet_seq_mark = len(st.events)
     return {"packet_id": pid, "packet": pk, "text": PKT.render(pk)}
@@ -101,7 +104,15 @@ def submit_reply(st: WorldState, cfg: dict, block: dict, force: bool = False) ->
             continue
         ruling = ADJ.adjudicate(st, cfg, prop, i)
         st.rulings.append(ruling)
+    from .systems import initiatives as INI
+    for i, item in enumerate(block.get("initiatives") or []):
+        if not isinstance(item, dict):
+            continue
+        st.rulings.append(INI.adjudicate(st, cfg, item, i))
     warnings = []
+    for item in block.get("narrative") or []:
+        w = add_narrative(st, item)
+        warnings += w
     for note in block.get("notes", []):
         text = str(note)[:300]
         w = note_warning(st, text)
@@ -116,6 +127,39 @@ def submit_reply(st: WorldState, cfg: dict, block: dict, force: bool = False) ->
         until = adv.get("until") or add_weeks(st.date, int(adv["weeks"]))
         out["advance"] = T.advance(st, cfg, str(until))
     return out
+
+
+CONSEQUENTIAL = re.compile(r"\$\s?\d|\b(cast as|signed with|got the part|was hired|married|engaged|divorced|"
+                           r"won the|fired|greenlit|pregnant|died|offered)\b", re.I)
+
+
+def add_narrative(st: WorldState, item) -> list:
+    """Narrative canon: details the narrator created (dialogue beats, rehearsals, habits, minor
+    characters, places) preserved for continuity. They carry no mechanical weight; anything that
+    should change the world belongs in `initiatives`."""
+    from .systems.initiatives import resolve
+    if isinstance(item, str):
+        item = {"text": item}
+    if not isinstance(item, dict) or not str(item.get("text", "")).strip():
+        return ["narrative entry without text ignored"]
+    text = str(item["text"]).strip()[:400]
+    warnings, about = [], []
+    for ref in item.get("about") or []:
+        obj, err = resolve(st, ref, "person")
+        if obj:
+            about.append(obj.id)
+        else:
+            warnings.append(f"narrative 'about' {err}")
+    if not item.get("about"):
+        w = note_warning(st, text)
+        if w:
+            warnings.append(w)
+    if CONSEQUENTIAL.search(text):
+        warnings.append(f"narrative entry '{text[:60]}...' reads like a consequential fact; it is kept as narrative "
+                        f"detail only and changes nothing. Propose it as an initiative if it should matter.")
+    st.narrative.append({"date": st.date, "text": text, "about": about, "packet": st.packet_id,
+                         "kind": str(item.get("kind", "detail"))[:30]})
+    return warnings
 
 
 def note_warning(st: WorldState, text: str) -> str | None:

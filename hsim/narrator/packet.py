@@ -13,27 +13,40 @@ from ..core.util import add_days, age_on, days_between, money
 from ..systems import decisions as D
 
 RULES = """You are the narrator of a Hollywood career simulation. The engine is the authority.
-- CANON below is fact. Never contradict it; never invent numbers (money, grosses, scores, dates), castings,
-  audition results, awards, deals, deaths or other outcomes.
-- You may freely invent dialogue, scenes, settings, minor fictional characters, moods and press colour,
-  consistent with each person's traits and history.
-- Consequential developments (a falling-out, a romance, a reputation moment, a purchase, a plan) must be
-  PROPOSED in the engine block, not narrated as settled. Narrate them as tentative until the engine rules.
+Three levels of canon:
+- HARD CANON (canon, rulings, your_work, standing, people facts): engine-confirmed. Never contradict it; never
+  invent numbers (money, grosses, scores, dates), castings, audition results, awards, deals, deaths or outcomes.
+- NARRATIVE CANON (narrative_canon, people[].narrative_canon): details you created earlier (dialogue beats,
+  rehearsals, habits, minor characters, places). Keep them consistent. Record new ones under `narrative`.
+- PROPOSED CONSEQUENTIAL CANON (initiatives): anything that should change the world (pursuing a film or a
+  filmmaker, meetings, introductions, social plans with someone, publicity, career repositioning, developing
+  an original project) goes under `initiatives`. Narrate the attempt, not the outcome; the engine rules
+  (accepted, partial, rejected with a reason, or pending for weeks) and the next packet reports it.
 - Present PENDING DECISIONS as in-story choices. End every reply with the engine block (see REPLY FORMAT).
+- Use people's `why_here`, `lately` and `with_you` to ground scenes; do not invent extra social events to fill time.
 - Information labelled 'rumour' may be wrong. Do not reveal anything the protagonist could not know."""
 
 REPLY_FORMAT = """```engine
 reply_to: {pid}
 decisions:            # one entry per decision the player made (omit if none)
   - {{id: dec-00000, choice: accept}}            # counter needs: {{id: ..., choice: counter, fee: 60000}}
-proposals:            # consequential developments for the engine to rule on (optional)
+initiatives:          # consequential moves for the engine to adjudicate; target/via take a name or an id
+  - {{kind: pursue_project, target: "<film title or id>", role: "<character, optional>", approach: "..."}}
+  - {{kind: inquire, target: "<film or person>"}}
+  - {{kind: meet, target: "<person>", approach: "why you want the meeting"}}
+  - {{kind: introduction, target: "<person>", via: "<someone you know who knows them>"}}
+  - {{kind: social, target: "<person you know>", approach: "dinner at their place"}}
+  - {{kind: publicity, mode: publicist|interview|talk_show|charity}}
+  - {{kind: reposition, details: {{genres: [drama], avoid_genres: [horror], min_role: supporting, no_tv: false, no_commercials: true}}}}
+  - {{kind: develop_project, title: "...", genre: drama, logline: "one sentence"}}
+proposals:            # interpersonal developments (optional)
   - {{id: p1, type: relationship_shift, with: <person id>, direction: positive|negative, severity: minor|moderate|major, cause: "..."}}
   - {{id: p2, type: romantic_overture, to: <person id>, approach: "..."}}
-  - {{id: p3, type: player_intent, kind: take_class|rest|meet_person|seek_agent|pursue_director, target: <person id or omit>, text: "..."}}
+  - {{id: p3, type: player_intent, kind: take_class|rest|seek_agent, text: "..."}}
   - {{id: p4, type: purchase, item: car|apartment|house|gift|vacation|wardrobe, text: "..."}}
   - {{id: p5, type: reputation_moment, person: <id>, direction: positive|negative, severity: minor|moderate, public: true|false, cause: "..."}}
-notes:                # small narrative facts to remember (names of minor characters, places, habits)
-  - "..."
+narrative:            # narrative canon: nonconsequential details to keep (optional `about` names or ids)
+  - {{text: "Rehearsed the diner scene with Ray at his apartment; he hums Sinatra between takes.", about: ["<name>"]}}
 advance: {{weeks: 4}}   # or {{until: YYYY-MM-DD}}; omit to stay at this date
 ```"""
 
@@ -105,6 +118,9 @@ def build(st: WorldState, cfg: dict, packet_id: str) -> dict:
         "period_summary": _period_summary(st, cfg, new_events),
         "rulings": list(st.rulings),
         "delegated": [x["text"] for x in st.delegated],
+        "standing_changes": _standing_changes(st, cfg, new_events),
+        "agent": _agent_plan(st, cfg, new_events),
+        "initiatives": _initiatives(st, new_events),
         "career_activity": _career_activity(st, cfg, new_events),
         "your_work": _projects(st, cfg) + _jobs(st),
         "network": _network(st, cfg),
@@ -116,6 +132,7 @@ def build(st: WorldState, cfg: dict, packet_id: str) -> dict:
         },
         "pending_decisions": [_decision(d, st) for d in D.pending(st)],
         "continuity": _continuity(st, cfg),
+        "narrative_canon": _narrative_canon(st),
         "era": _era(st, cfg),
         "narrator_notes": st.notes[-20:],
     }
@@ -204,43 +221,59 @@ def _projects(st, cfg) -> list:
 
 
 def _people(st, cfg, canon) -> list:
+    """The people who matter to this stretch of the story, each with the reason they're here."""
     pl = st.player
-    ids = []
+    ids = []                                        # (person id, why they're in this packet)
+    def add(pid, why):
+        if pid:
+            ids.append((pid, why))
+    if pl.partner_id:
+        add(pl.partner_id, "your partner")
+    if pl.agent_person_id:
+        add(pl.agent_person_id, "your agent")
     for pid, p in sorted(st.projects.items()):
         if p.stage in ("released", "dead"):
             continue
         cast = [st.roles[r].cast_id for r in p.role_ids if st.roles[r].cast_id]
         if pl.id in cast:
-            ids += [x for x in cast if x != pl.id] + ([p.director_id] if p.director_id else [])
-    if pl.partner_id:
-        ids.insert(0, pl.partner_id)
-    for e in canon:
-        ids += [a for a in e["actors"] if a != pl.id]
+            add(p.director_id, f"directing your film '{p.title}'")
+            for x in cast:
+                if x != pl.id:
+                    add(x, f"in the cast of your film '{p.title}'")
     for d in D.pending(st):
-        if "person" in d.refs:
-            ids.append(d.refs["person"])
         prj = st.projects.get(d.refs.get("project")) or (
             st.projects.get(st.offers[d.refs["offer"]].project_id) if d.refs.get("offer") in st.offers else None)
+        add(d.refs.get("person"), f"part of a decision waiting for you ({d.kind})")
         if prj:
-            ids += [prj.director_id] if prj.director_id else []
-            ids += [st.roles[r].cast_id for r in prj.role_ids if st.roles[r].cast_id]
-    if pl.agent_person_id:
-        ids.insert(0, pl.agent_person_id)
+            add(prj.director_id, f"directing '{prj.title}', which a pending decision is about")
+            for r in prj.role_ids:
+                add(st.roles[r].cast_id, f"already cast in '{prj.title}', which a pending decision is about")
+    for ini in st.initiatives.values():
+        if ini["status"] in ("pending", "writing", "pitching", "watching") and ini["data"].get("target"):
+            add(ini["data"]["target"], f"the person your {ini['kind']} initiative is aimed at")
     for j in st.market.get("jobs", []):
         if j["person"] == pl.id:
-            ids += [c for c in j.get("colleagues", [])][:5]
-    for e in st.events[st.packet_seq_mark:]:
-        if pl.id in e["actors"]:
-            ids += [a for a in e["actors"] if a != pl.id]
+            for c in j.get("colleagues", [])[:5]:
+                add(c, f"working with you on {j.get('show') or j.get('film') or j.get('play') or j['name']}")
+    for e in canon:
+        for a_ in e["actors"]:
+            if a_ != pl.id:
+                add(a_, f"in this period's events ({e['type'].replace('_', ' ')}, {e['date']})")
+    for n in st.narrative[-30:]:
+        for a_ in n.get("about", []):
+            add(a_, "in recent narrative canon")
     rels = sorted((r for r in st.rels.values() if pl.id in (r.a, r.b) and (r.history or r.contact_weeks)),
                   key=lambda r: (r.history[-1]["date"] if r.history else "", abs(r.affinity)), reverse=True)
-    ids += [r.b if r.a == pl.id else r.a for r in rels[:8]]
+    for r in rels[:8]:
+        add(r.b if r.a == pl.id else r.a, "someone you've been in touch with recently")
     seen, out = set(), []
-    for i in ids:
+    for i, why in ids:
         if i in seen or i not in st.people or i == pl.id:
             continue
         seen.add(i)
-        out.append(_person_card(st, st.people[i]))
+        card = _person_card(st, st.people[i])
+        card = {"why_here": why, **card}
+        out.append(card)
         if len(out) >= cfg["narrator"]["max_people"]:
             break
     return out
@@ -299,7 +332,27 @@ def _person_card(st, p) -> dict:
     if r:
         card["with_you"] = {"standing": affinity_label(r.affinity), "status": r.status,
                             "history": [h["text"] + f" ({h['date']})" for h in r.history[-4:]]}
+    lately = _lately(st, p)
+    if lately:
+        card["lately"] = lately
+    about = [f"{n['date']}: {n['text']}" for n in st.narrative if p.id in n.get("about", [])][-4:]
+    if about:
+        card["narrative_canon"] = about
     return card
+
+
+def _lately(st, p, days: int = 120) -> list:
+    """What this person has been doing on their own, as far as the protagonist could know (public events,
+    plus anything the protagonist witnessed)."""
+    since = add_days(st.date, -days)
+    out = []
+    for e in reversed(st.events):
+        if e["date"] < since or len(out) >= 3:
+            break
+        if p.id in e["actors"] and st.player_id not in e["actors"] and e["public"] and e["salience"] >= 1 \
+                and e["type"] not in ("chart", "tracking"):
+            out.append(f"{e['date']}: {e['text']}")
+    return out[::-1]
 
 
 SIMULATED_PERSONAL = {"romance", "marriage", "breakup", "divorce", "chemistry"}
@@ -355,6 +408,100 @@ def _relationship_status(st, p) -> str:
     return "single"
 
 
+def standing(st) -> dict:
+    """The protagonist's observable standing (labels, as the industry would describe it)."""
+    p = st.player
+    return {"public_profile": fame_label(p.fame), "momentum": heat_label(p.heat), "draw": bank_label(p.bankability),
+            "critics": critic_label(p.critical_rep) if _reviewed(st, p) else "no reviewed work yet",
+            "industry_standing": prestige_label(p.prestige),
+            "quote": money(p.quote) if p.quote else "no established quote"}
+
+
+def prestige_label(x: float) -> str:
+    return ("a newcomer" if x < 15 else "a working professional" if x < 30 else "respected" if x < 50
+            else "highly respected" if x < 70 else "an industry heavyweight")
+
+
+STANDING_CAUSES = {"reviews", "trade_verdict", "player_film_gross", "nomination", "oscar_win", "talk_show", "publicity",
+                   "reputation", "cast", "job_done", "run_end", "oscar_nominations", "audition_result"}
+
+
+def _standing_changes(st, cfg, new_events) -> dict:
+    """How the protagonist's standing moved since the last packet, and what moved it."""
+    pl = st.player
+    before = st.market.get("standing_mark")
+    now = standing(st)
+    if not before:
+        return {"now": now, "changes": [], "causes": []}
+    changes = [f"{k.replace('_', ' ')}: {before[k]} -> {now[k]}" for k in now if before.get(k) != now[k]]
+    mine = {c.get("project_id") for c in pl.credits}
+    causes = [f"{e['date']}: {e['text']}" for e in new_events if e["type"] in STANDING_CAUSES
+              and (pl.id in e["actors"] or e["refs"].get("project") in mine)
+              and not (e["type"] == "audition_result" and "won" not in e["text"])]
+    if any(c.startswith("momentum") for c in changes) and not causes:
+        causes.append("no new work or press: momentum fades on its own between projects")
+    if any(c.startswith("public profile") for c in changes) and not causes:
+        causes.append("out of the public eye: recognition fades slowly without new releases")
+    return {"now": now, "changes": changes, "causes": causes[-8:]}
+
+
+def _agent_plan(st, cfg, new_events) -> dict | None:
+    """What your agent is doing for you, strategically, and how much of their attention you get."""
+    from ..systems.agents import commission_potential
+    pl = st.player
+    agent = st.people.get(pl.agent_person_id) if pl.agent_person_id else None
+    if not agent:
+        return None
+    book = sorted((c for c in st.actors() if c.agent_person_id == agent.id),
+                  key=lambda c: (-commission_potential(st, cfg, c), c.id))
+    rank = next((i for i, c in enumerate(book) if c.id == pl.id), len(book))
+    focus = cfg["agents"]["plans"]["focus_clients"]
+    attention = (f"you are one of {agent.name}'s priority clients (of {len(book)}); you get their calls first"
+                 if rank < focus else
+                 f"you're one of {len(book)} clients; {agent.name}'s calls go first to the clients who earn the most, "
+                 f"so pushes for you come when you have a specific angle (a director who rates you)")
+    start = new_events[0]["date"] if new_events else st.date
+    pushes = [x for x in st.market.get("agent_pushes", []) if x["client"] == pl.id and x["date"] >= start]
+    lines = []
+    for x in pushes:
+        prj, role = st.projects.get(x["project"]), st.roles.get(x["role"])
+        if prj and role:
+            lines.append(f"{x['date']}: pushed for {role.name} ({role.importance}) in '{prj.title}' — "
+                         + ("casting agreed to see you" if x["result"] == "agreed to see" else f"declined: {x.get('reason')}"))
+    waiting = []
+    for r in st.roles.values():
+        if pl.id in r.requested and r.status == "open" and not r.cast_id:
+            prj = st.projects[r.project_id]
+            waiting.append(f"'{prj.title}' ({prj.stage}): they'll see you for {r.name} ({r.importance}) when casting opens")
+    out = {"agent": f"{agent.name} ({_profession(st, agent)})", "strategy": _strategy(pl), "attention": attention}
+    if pl.directives:
+        out["your_directives"] = {k: v for k, v in pl.directives.items()}
+    if lines:
+        out["pushes_this_period"] = lines
+    if waiting:
+        out["doors_open"] = waiting
+    return out
+
+
+def _initiatives(st, new_events) -> list:
+    """Initiatives under adjudication (proposed consequential canon) and ones that moved this period."""
+    start = new_events[0]["date"] if new_events else st.date
+    out = []
+    for iid, ini in st.initiatives.items():
+        open_ = ini["status"] in ("pending", "writing", "pitching", "watching")
+        moved = [s_ for s_ in ini["steps"] if s_["date"] >= start]
+        if not open_ and not moved:
+            continue
+        out.append({"id": iid, "kind": ini["kind"], "status": ini["status"], "started": ini["created"],
+                    "history": [f"{s_['date']}: {s_['text']}" for s_ in ini["steps"][-5:]],
+                    **({"next_step_due": ini["due"]} if ini.get("due") and open_ else {})})
+    return out
+
+
+def _narrative_canon(st) -> list:
+    return [f"{n['date']}: {n['text']}" for n in st.narrative[-15:]]
+
+
 def _strategy(p) -> str:
     from ..systems.agents import strategy_summary
     return strategy_summary(p)
@@ -370,16 +517,37 @@ def _period_summary(st, cfg, new_events) -> dict:
     weeks = max(1, days_between(new_events[0]["date"], st.date) // 7) if new_events else 0
     work = kinds.get("job_booked", 0) + kinds.get("cast", 0)
     auditions = kinds.get("audition_result", 0)
-    quiet = work == 0 and auditions == 0 and not D.pending(st)
-    pieces = [f"{weeks} week(s)", f"{len(subs)} submission(s) by your agent",
+    start = new_events[0]["date"] if new_events else st.date
+    busy = working_during(st, pl, start, st.date)
+    quiet = work == 0 and auditions == 0 and not busy and not D.pending(st)
+    pieces = [f"{weeks} week(s)"] + ([f"working on {len(busy)} job(s)"] if busy else []) + [f"{len(subs)} submission(s) by your agent",
               f"{sum(1 for x in subs if x['status'] in ('called in', 'requested'))} call-in(s)",
               f"{auditions} audition(s)", f"{work} booking(s)"]
     ledger = [x for x in st.market.get("player_ledger", []) if new_events and x["date"] >= new_events[0]["date"]]
     net = sum(x.get("net", 0) for x in ledger)
     return {"overview": ", ".join(pieces) + f"; net money {'+' if net >= 0 else ''}{money(net)}.",
+            "working": busy[-8:],
             "quiet_period": quiet,
             "note": ("A quiet stretch: realistic downtime. Portray ordinary life, waiting and small moments; "
                      "do not invent career breakthroughs.") if quiet else ""}
+
+
+def working_during(st, p, start: str, end: str) -> list:
+    """Productions and jobs the person was committed to at any point in [start, end].
+    Time on set, in rehearsal or under contract is not a quiet period."""
+    from ..core.util import overlaps
+    out = []
+    for c in p.calendar:
+        prj = st.projects.get(c["project_id"])
+        if prj and overlaps(c["start"], c["end"], start, end):
+            out.append(f"{'shooting' if c['kind'] == 'shoot' else c['kind']} '{prj.title}' ({c['start']} to {c['end']})")
+    for j in st.market.get("jobs", []) + st.market.get("jobs_done", []):
+        if j.get("person") == p.id and overlaps(j["start"], j["end"], start, end):
+            what = j.get("show") or j.get("film") or j.get("play") or j.get("product") or j["name"]
+            item = f"{j['kind'].replace('_', ' ')}: {what} ({j['start']} to {j['end']})"
+            if item not in out:
+                out.append(item)
+    return out
 
 
 def _career_activity(st, cfg, new_events) -> dict:

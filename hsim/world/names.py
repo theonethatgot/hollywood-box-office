@@ -85,7 +85,7 @@ PREMISE = {
                 "accidentally wins a radio contest", "inherits a failing nightclub",
                 "gets mistaken for a famous spy"],
                ["and everything goes wrong", "with the whole neighbourhood watching",
-                "before the wedding on Saturday", "in the middle of a heatwave"]),
+                "the week before the wedding", "in the middle of a heatwave"]),
     "action": (["a burned-out cop", "an ex-Marine", "a getaway driver", "a federal marshal",
                 "a mercenary with a conscience"],
                ["hunts the gang that killed his partner", "must escort a witness across the border",

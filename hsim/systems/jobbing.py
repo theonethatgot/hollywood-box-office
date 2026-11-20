@@ -55,6 +55,7 @@ def _busy(p, start, end) -> bool:
 
 def step(st: WorldState, cfg: dict) -> None:
     from .agents import strategy_fit
+    from .initiatives import allows
     infl = market.infl(cfg, year(st.date))
     actors = [x for x in st.actors() if not x.historical and x.controller != "player"]
     pools = {"fiction": actors,
@@ -69,7 +70,9 @@ def step(st: WorldState, cfg: dict) -> None:
         g = R.stream(st.seed, "job", pid, st.date)
         names = sorted(KINDS)
         names = [k for k in names if KINDS[k][4] > 0]
-        w = [KINDS[k][4] * (0.4 + strategy_fit(st, p, None, None, kind=k)) for k in names]
+        w = [KINDS[k][4] * (0.4 + strategy_fit(st, p, None, None, kind=k)) * allows(p, k) for k in names]
+        if not sum(w):
+            continue
         kind = names[int(g.choice(len(names), p=[x / sum(w) for x in w]))]
         weeks, (lo, hi), craft_gain, fame_gain, _ = KINDS[kind]
         start = add_days(st.date, 7 * int(g.integers(1, 4)))

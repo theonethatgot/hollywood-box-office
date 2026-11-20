@@ -4,7 +4,7 @@ from __future__ import annotations
 from ..core.state import WorldState
 from ..core.util import add_days
 from . import (agents, awards, boxoffice, careers, casting, decisions, finance, jobbing, personal,
-               production, release, social, studios, tvcasting)
+               initiatives, production, release, social, studios, tvcasting)
 
 STOP_EVENT_TYPES = {
     "premieres": {"player_film_gross"},
@@ -28,6 +28,8 @@ def tick(st: WorldState, cfg: dict) -> None:
     social.step(st, cfg)
     personal.step(st, cfg)
     agents.step(st, cfg)
+    agents.plan_week(st, cfg)
+    initiatives.step(st, cfg)
     agents.memory_fades(st, cfg)
     careers.step(st, cfg)
     finance.step(st, cfg)
