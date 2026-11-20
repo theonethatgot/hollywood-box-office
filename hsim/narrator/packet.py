@@ -488,12 +488,15 @@ def _agent_plan(st, cfg, new_events) -> dict | None:
     return out
 
 
+OPEN_INITIATIVE = ("pending", "writing", "pitching", "watching", "turnaround")   # turnaround can be revived
+
+
 def _initiatives(st, new_events) -> list:
     """Initiatives under adjudication (proposed consequential canon) and ones that moved this period."""
     start = new_events[0]["date"] if new_events else st.date
     out = []
     for iid, ini in st.initiatives.items():
-        open_ = ini["status"] in ("pending", "writing", "pitching", "watching")
+        open_ = ini["status"] in OPEN_INITIATIVE
         moved = [s_ for s_ in ini["steps"] if s_["date"] >= start]
         if not open_ and not moved:
             continue
@@ -699,7 +702,7 @@ def _continuity(st, cfg) -> dict:
                 scenes.append((h["date"], f"with {other.name}: {h['text']}"))
     scenes += [(n["date"], n["text"]) for n in st.notes[-10:]]
     scenes.sort()
-    closed = [i for i in st.initiatives.values() if i["status"] not in ("pending", "writing", "pitching", "watching")]
+    closed = [i for i in st.initiatives.values() if i["status"] not in OPEN_INITIATIVE]
     initiatives = [f"{i['created']} {i['kind'].replace('_', ' ')}: " + " -> ".join(s_["text"] for s_ in
                    (i["steps"][:1] + i["steps"][-1:] if len(i["steps"]) > 1 else i["steps"])) for i in closed]
     return {"career_so_far": credits[-12:],
