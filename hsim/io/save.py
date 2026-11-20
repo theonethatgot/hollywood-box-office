@@ -7,6 +7,12 @@ Layout
   snapshots(tag, json, events_count)  'current' plus one per exported packet (rewind points)
 
 Determinism contract: genesis(meta) + commands → identical state hash.
+
+Serialisation preserves dictionary order exactly (no sort_keys). A reloaded state
+must be indistinguishable from the one that was saved: several calculations sum
+floats while iterating dictionaries, and float addition depends on order, so a
+save/load that reorders keys would make a reloaded campaign drift from its replay
+by last-bit differences. Hashes are computed separately in canonical (sorted) form.
 """
 from __future__ import annotations
 
@@ -45,7 +51,7 @@ class SaveFile:
     # --- commands ---
     def append_command(self, cmd: dict) -> int:
         n = self.commands_count()
-        self.db.execute("INSERT INTO commands VALUES (?, ?)", (n, json.dumps(cmd, sort_keys=True)))
+        self.db.execute("INSERT INTO commands VALUES (?, ?)", (n, json.dumps(cmd)))
         return n
 
     def commands(self) -> list:
@@ -61,9 +67,9 @@ class SaveFile:
             self.db.execute("DELETE FROM events WHERE seq >= ?", (len(st.events),))
             have = len(st.events)
         self.db.executemany("INSERT INTO events VALUES (?, ?)",
-                            [(e["seq"], json.dumps(e, sort_keys=True)) for e in st.events[have:]])
+                            [(e["seq"], json.dumps(e)) for e in st.events[have:]])
         self.db.execute("INSERT OR REPLACE INTO snapshots VALUES (?, ?, ?, ?)",
-                        (tag, json.dumps(st.to_dict(), sort_keys=True), len(st.events), self.commands_count()))
+                        (tag, json.dumps(st.to_dict()), len(st.events), self.commands_count()))
         self.db.commit()
 
     def read_state(self, tag: str = "current") -> WorldState:

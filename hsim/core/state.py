@@ -98,7 +98,7 @@ class WorldState:
             if f.name == "events" and not include_events:
                 continue
             if f.name in REGISTRIES:
-                v = {k: dataclasses.asdict(o) for k, o in sorted(v.items())}
+                v = {k: dataclasses.asdict(o) for k, o in v.items()}   # preserve order: see save.py
             out[f.name] = v
         return out
 

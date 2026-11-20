@@ -234,9 +234,25 @@ def rewind(save, packet_id, new_name, in_place):
 
 @main.command()
 @click.argument("save")
-def verify(save):
-    """Replay genesis + command log and compare state hashes."""
+@click.option("--adopt-replay", is_flag=True,
+              help="Repair a save from before order-preserving serialisation: adopt its exact replay if, and only if, "
+                   "the event history is identical and the only differences are float last-bit rounding.")
+@click.option("--rebaseline", is_flag=True,
+              help="Legacy saves: keep everything exactly as it happened and make the current state the verified "
+                   "checkpoint that later commands must replay from.")
+def verify(save, adopt_replay, rebaseline):
+    """Replay genesis (or the verified checkpoint) + command log and compare state hashes."""
     g = _open(save)
+    if rebaseline:
+        r = g.rebaseline("legacy save written before order-preserving serialisation")
+        click.echo(json.dumps(r, indent=2))
+        return
+    if adopt_replay:
+        r = g.adopt_replay()
+        click.echo(json.dumps(r, indent=2, default=str))
+        if not r["adopted"]:
+            sys.exit(1)
+        return
     r = g.replay_check()
     click.echo(json.dumps(r, indent=2))
     if not r["match"]:

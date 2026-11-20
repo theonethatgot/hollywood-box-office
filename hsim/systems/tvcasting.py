@@ -48,14 +48,14 @@ def step(st: WorldState, cfg: dict) -> None:
 
 def _cast_part(st, cfg, show, k, by_gender) -> None:
     from ..world.people import character_name
-    from ..world.tv import EPISODES, GUEST_PARTS
+    from ..world.tv import EPISODES, guest_part
     from .agents import agent_hustle, pass_reason_tv, strategy_fit
     from .casting import agency_visibility
     g = R.stream(st.seed, "tv-part", show.id, st.date, k)
     gender = "m" if g.random() < 0.55 else "f"
     center = int(g.integers(20, 62))
     reg = REGISTER[show.genre]
-    part = GUEST_PARTS[int(g.integers(len(GUEST_PARTS)))]
+    part = guest_part(g, gender)               # the description always matches the role's gender
     episode = f"an episode about {EPISODES[show.genre][int(g.integers(len(EPISODES[show.genre])))]}"
     start = add_days(st.date, 14)
     end = add_weeks(start, 1)

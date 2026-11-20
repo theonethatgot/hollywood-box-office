@@ -48,10 +48,20 @@ EPISODES = {
     "action": ["a forest fire trapping hikers", "a smuggling ring on the coast", "a stranded school bus",
                "a mountain avalanche", "a sabotaged oil rig"],
 }
-GUEST_PARTS = ["the witness", "the suspect's girlfriend", "a desperate parent", "a con artist", "a rookie officer",
-               "the victim's sister", "a nightclub owner", "a nervous bank teller", "a society reporter",
-               "the new neighbour", "a hitchhiker", "a hotshot lawyer", "an old friend of the lead", "a waitress",
-               "a hotel clerk", "a drifter", "a young doctor", "a union boss"]
+# Neutral parts can be cast with any gender (ordinary gender-flexible casting); gendered
+# descriptions only go with a role of that gender.
+GUEST_PARTS_NEUTRAL = ["the witness", "a desperate parent", "a con artist", "a rookie officer", "a nightclub owner",
+                       "a nervous bank teller", "a society reporter", "the new neighbour", "a hitchhiker",
+                       "a hotshot lawyer", "an old friend of the lead", "a hotel clerk", "a drifter", "a young doctor",
+                       "a union boss"]
+GUEST_PARTS_GENDERED = {"f": ["the suspect's girlfriend", "the victim's sister", "a waitress", "a grieving widow"],
+                        "m": ["the suspect's boyfriend", "the victim's brother", "a bartender", "a grieving widower"]}
+GUEST_PARTS = GUEST_PARTS_NEUTRAL + GUEST_PARTS_GENDERED["f"] + GUEST_PARTS_GENDERED["m"]
+
+
+def guest_part(g, gender: str) -> str:
+    pool = GUEST_PARTS_NEUTRAL + GUEST_PARTS_GENDERED.get(gender, [])
+    return pool[int(g.integers(len(pool)))]
 
 
 def make_shows(st: WorldState, cfg: dict) -> None:

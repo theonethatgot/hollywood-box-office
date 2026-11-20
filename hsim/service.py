@@ -24,6 +24,16 @@ from .world import genesis
 ENGINE_VERSION = "0.1.0"
 
 
+def engine_fingerprint(cfg: dict) -> str:
+    """Hash of the engine source and configuration. Replay is only meaningful within one fingerprint."""
+    import hashlib
+    from .core.config import ROOT
+    h = hashlib.sha256(config_hash(cfg).encode())
+    for path in sorted((ROOT / "hsim").rglob("*.py")):
+        h.update(path.read_bytes())
+    return h.hexdigest()[:16]
+
+
 def genesis_state(cfg: dict, params: dict) -> WorldState:
     pack = None
     if params.get("data_pack"):
@@ -140,6 +150,7 @@ class Game:
         g.save.set_meta("genesis", params)
         g.save.set_meta("engine_version", ENGINE_VERSION)
         g.save.set_meta("config_hash", config_hash(g.cfg))
+        g.save.set_meta("engine_fingerprint", engine_fingerprint(g.cfg))
         g.state = genesis_state(g.cfg, params)
         g.save.write_state(g.state)
         return g
@@ -160,6 +171,15 @@ class Game:
         return None
 
     def command(self, cmd: dict) -> dict:
+        fp = engine_fingerprint(self.cfg)
+        old = self.save.get_meta("engine_fingerprint")
+        if old != fp:
+            # the engine changed since this save last ran: earlier commands can't be replayed by this
+            # engine, so checkpoint the state exactly as it is (nothing that happened changes)
+            self.state.log("engine_checkpoint", "Simulation engine updated; save checkpointed for verification.",
+                           salience=0, public=False, data={"from": old, "to": fp})
+            self.rebaseline(f"engine changed ({old or 'unrecorded'} -> {fp})", check=False)
+            self.save.set_meta("engine_fingerprint", fp)
         self.save.append_command(cmd)
         result = apply(self.state, self.cfg, cmd)
         if cmd["type"] == "packet":
@@ -168,14 +188,77 @@ class Game:
         self.save.write_state(self.state)
         return result
 
+    def replayed_state(self) -> WorldState:
+        """Replay from genesis, or from a verified checkpoint if the save has one."""
+        base = self.save.get_meta("replay_base")
+        cmds = self.save.commands()
+        if base:
+            st = self.save.read_state(base["tag"])
+            cmds = cmds[base["commands"]:]
+        else:
+            st = genesis_state(self.cfg, self.save.get_meta("genesis"))
+        for cmd in cmds:
+            apply(st, self.cfg, cmd)
+        return st
+
+    def rebaseline(self, reason: str, check: bool = True) -> dict:
+        """Make a legacy save verifiable again WITHOUT changing anything that happened: the
+        current state (what the narrator has seen) becomes the verified checkpoint, and all
+        later commands must replay exactly from it. History before the checkpoint cannot be
+        re-derived from genesis (it was written by an engine whose saves reordered keys)."""
+        before = self.replay_check() if check else {"match": None}
+        self.save.write_state(self.state, tag="replay_base")
+        self.save.set_meta("replay_base", {"tag": "replay_base", "commands": self.save.commands_count(),
+                                           "date": self.state.date, "reason": reason,
+                                           "genesis_replay_matched": before["match"]})
+        self.save.commit()
+        return {"checkpoint_date": self.state.date, "commands_before_checkpoint": self.save.commands_count(),
+                "genesis_replay_matched_before": before["match"], "state_hash": self.state.state_hash()}
+
+    def adopt_replay(self, rel_tol: float = 1e-9) -> dict:
+        """Repair a save written before order-preserving serialisation (engine <= cbc197a):
+        replace the stored state with its exact replay, but ONLY if the event history is
+        identical and every difference is a float last-bit difference. Anything else is refused."""
+        replay = self.replayed_state()
+        if replay.event_chain != self.state.event_chain or len(replay.events) != len(self.state.events):
+            return {"adopted": False, "reason": "event histories differ: this is not a rounding-only divergence"}
+        diffs = []
+
+        def walk(a, b, path):
+            if isinstance(a, dict) and isinstance(b, dict):
+                if set(a) != set(b):
+                    diffs.append((path, "keys differ", None, None))
+                    return
+                for k in a:
+                    walk(a[k], b[k], f"{path}/{k}")
+            elif isinstance(a, list) and isinstance(b, list):
+                if len(a) != len(b):
+                    diffs.append((path, "length differs", None, None))
+                    return
+                for i, (x, y) in enumerate(zip(a, b)):
+                    walk(x, y, f"{path}[{i}]")
+            elif isinstance(a, float) and isinstance(b, float):
+                if a != b:
+                    diffs.append((path, "float", a, b))
+            elif a != b:
+                diffs.append((path, "value", a, b))
+        walk(self.state.to_dict(), replay.to_dict(), "")
+        bad = [d for d in diffs if d[1] != "float" or abs(d[2] - d[3]) > rel_tol * max(1.0, abs(d[2]), abs(d[3]))]
+        report = [{"path": p, "saved": a, "replayed": b} for p, _, a, b in diffs[:50]]
+        if bad:
+            return {"adopted": False, "reason": f"{len(bad)} non-rounding differences", "differences": report}
+        self.state = replay
+        self.save.write_state(replay)
+        return {"adopted": True, "float_differences": len(diffs), "differences": report,
+                "new_hash": replay.state_hash()}
+
     # read-only helpers
     def replay_check(self) -> dict:
-        params = self.save.get_meta("genesis")
-        st = genesis_state(self.cfg, params)
-        for cmd in self.save.commands():
-            apply(st, self.cfg, cmd)
+        st = self.replayed_state()
+        base = self.save.get_meta("replay_base")
         return {"replayed_hash": st.state_hash(), "saved_hash": self.state.state_hash(),
-                "match": st.state_hash() == self.state.state_hash(), "commands": self.save.commands_count()}
+                "match": st.state_hash() == self.state.state_hash(), "commands": self.save.commands_count(),
+                "replayed_from": f"checkpoint {base['date']}" if base else "genesis"}
 
     def close(self):
         self.save.close()
@@ -196,6 +279,9 @@ def rewind(path: str | Path, packet_id: str, new_path: str | Path | None = None)
         raise KeyError(f"no snapshot for packet {packet_id}")
     st = sf.read_state(packet_id)
     sf.truncate_commands(info[1])
+    base = sf.get_meta("replay_base")
+    if base and base["commands"] > info[1]:
+        sf.db.execute("DELETE FROM meta WHERE k='replay_base'")     # checkpoint lies after the rewind point
     for tag in sf.tags():
         if tag not in ("current", packet_id):
             other = sf.snapshot_info(tag)

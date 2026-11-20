@@ -90,7 +90,7 @@ def step(st: WorldState, cfg: dict) -> None:
 def _detail(st, cfg, p, kind, g, start, end, pools) -> dict | None:
     """Make the job concrete: where, what part, with whom."""
     from ..world.people import character_name
-    from ..world.tv import EPISODES, GUEST_PARTS
+    from ..world.tv import EPISODES, guest_part
     if kind == "tv_guest":
         shows = [s for _, s in sorted(st.shows.items()) if s.active]
         if not shows:
@@ -99,7 +99,7 @@ def _detail(st, cfg, p, kind, g, start, end, pools) -> dict | None:
         director = s.director_ids[int(g.integers(len(s.director_ids)))] if s.director_ids else None
         colleagues = [x for x in s.regulars if x != p.id] + ([director] if director else [])
         return {"name": f"a guest role on '{s.title}' ({s.network})", "show": s.title, "network": s.network,
-                "format": s.format, "character": f"{character_name(g, p.gender)}, {GUEST_PARTS[int(g.integers(len(GUEST_PARTS)))]}",
+                "format": s.format, "character": f"{character_name(g, p.gender)}, {guest_part(g, p.gender)}",
                 "episode": f"an episode about {EPISODES[s.genre][int(g.integers(len(EPISODES[s.genre])))]}",
                 "colleagues": colleagues, "director": director}
     if kind == "commercial":

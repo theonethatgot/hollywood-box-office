@@ -107,6 +107,21 @@ Example packets: `docs/examples/`.
   alternate timeline but unusual; needs a stronger "documented-career fit" for real directors.
 - Real people's personalities remain priors (labelled). Biography-derived traits with citations are planned.
 
+## Bug-fix pass: replay determinism and guest-part gender
+- **Replay drift (root cause):** saves were written with sorted keys, so a reloaded state iterated nested
+  dictionaries (e.g. a film's audience segments) in a different order from the original run. Weekly
+  admissions are summed in that loop and float addition depends on order, so cumulative grosses drifted by
+  last-bit amounts (~$0.00000002) and award announcements listed categories in a different order. Saves now
+  preserve order exactly; hashes stay canonical. Regression tests reopen the save between every command.
+- **Legacy saves:** `hsim verify --rebaseline` keeps everything exactly as it happened and makes the current
+  state a verified checkpoint; `hsim verify --adopt-replay` adopts the replay only when event histories are
+  identical and every difference is float rounding (refuses anything else).
+- **Engine updates:** saves record an engine fingerprint; the first command after an update checkpoints the
+  save automatically (replay is only meaningful within one engine version).
+- **Guest-part gender:** TV guest parts drew gender and description independently ("the suspect's girlfriend"
+  as a male role). Candidate filtering already respected the role's gender; descriptions now match it.
+  Neutral parts stay gender-flexible. Film roles were unaffected (0 of 52 checked mismatched).
+
 ## Calibration (4 historical worlds × 2 years, 1980–81, 1980 dollars)
 | Metric | Simulated | Reference / note |
 |---|---|---|
