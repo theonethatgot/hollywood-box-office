@@ -659,7 +659,9 @@ def _greenlight_development(st, cfg, ini, studio, g):
     casting.attach_director(st, cfg, p)
     lead = next((st.roles[r] for r in p.role_ids if st.roles[r].importance == "lead"), None)
     if lead:
-        lead.gender = st.player.gender
+        if lead.gender != st.player.gender:          # the part is rewritten for its developer: name follows gender
+            from ..world.people import character_name
+            lead.gender, lead.name = st.player.gender, character_name(g, st.player.gender)
         age = age_on(st.player.birth, st.date)
         lead.age_min, lead.age_max = age - 5, age + 5
         lead.requested.append(st.player_id)

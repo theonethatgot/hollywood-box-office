@@ -171,6 +171,21 @@ def test_develop_project_takes_time_money_and_studio_judgement(cfg, params):
     assert "quality" not in str(PKT.build(st, cfg, "pkt-x")["initiatives"])  # hidden script quality never shown
 
 
+def test_greenlit_development_lead_matches_its_developer(cfg, params):
+    from hsim.core import rng as R
+    from hsim.world.names import FIRST_F, FIRST_M
+    st = _world(cfg, params, weeks=2)
+    studio = next(s for s in st.studios.values() if s.slate_per_year > 0)
+    for i in range(6):
+        ini = {"id": f"t{i}", "data": {"title": f"Test {i}", "genre": "action", "logline": "A long enough logline here.",
+                                       "quality": 60.0}}
+        proj = INI._greenlight_development(st, cfg, ini, studio, R.stream(1, "dev-test", i))
+        lead = next(st.roles[r] for r in proj.role_ids if st.roles[r].importance == "lead")
+        assert lead.gender == st.player.gender and lead.intended == st.player_id
+        first = lead.name.split()[0]
+        assert first not in (FIRST_M if st.player.gender == "f" else FIRST_F)
+
+
 # -------------------------------------------------------------- agents ---
 def test_agent_pushes_do_not_depend_on_who_is_the_player(cfg, params):
     st = _world(cfg, params, weeks=6)
