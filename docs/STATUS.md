@@ -162,8 +162,17 @@ interrupt stops on an opening, not every weekend of the run; a character's key s
 agent's read of the room used the protagonist's rank instead of their client's (caught before release).
 Replay determinism and guest-part gender (previous pass) keep their tests; all saves replay.
 
-**Demonstration:** `docs/examples/initiatives/` (see its README) is a real saved career, Daniel Brooks,
-on the historical 1980 world.
+**Demonstration:** `docs/examples/initiatives/` (see its README) is a real saved career: Daniel Brooks, a
+notable actor on the historical 1980 world, 40 turns through August 1982, which replays exactly (81 commands).
+It shows a narrator-originated pursuit rejected for its real date conflict; a meeting arranged; his agent spending
+a call on a colead for him (declined: "they want a bigger name"); and an original drama developed, passed on,
+packaged with Bruce Beresford, put in turnaround, rewritten and greenlit at Orion. A packet ten months later still
+carries all of it (Beresford's card, narrative canon, resolved initiatives). Playing it found six bugs, each fixed
+with a regression test (listed in that README).
+
+**Also fixed in this pass:** a greenlit package keeps its attached director and actors; a developed lead is
+renamed when re-gendered; narrative canon about someone the protagonist never met is flagged; resolved initiatives
+stay in `continuity`; people with history come before small-part co-stars on the people list.
 
 ## Calibration (4 historical worlds × 2 years, 1980–81, 1980 dollars)
 | Metric | Simulated | Reference / note |

@@ -13,7 +13,9 @@ player act inside that world.
   minor characters, places, personal details. Record what should persist under `narrative` in
   the engine block; it comes back in `narrative_canon` and on the relevant people's cards. It
   carries no mechanical weight, so it must not claim outcomes ("got the part", "$50,000",
-  "signed with ...", "married"). The engine flags entries that read like outcomes.
+  "signed with ...", "married"). The engine flags entries that read like outcomes, and entries
+  `about` someone the protagonist has no recorded contact with (often a sign the detail belongs
+  to a different story, or names the wrong director).
 - **Proposed consequential canon**: anything that should change the world is an
   **initiative**. Narrate the attempt (the call, the pitch, the dinner invitation) as
   unresolved. The engine adjudicates it with the same rules everyone lives by and answers
@@ -136,7 +138,13 @@ Initiative kinds:
   (featured|supporting|colead|lead), `no_tv`, `no_commercials`. A standing directive to your
   agent; they follow it and say what it will cost you.
 - `develop_project`: `title`, `genre`, `logline`. Hire a writer (costs money, takes weeks); then
-  your agent pitches the draft to studios, who decide for themselves.
+  your agent pitches the draft to studios, who decide for themselves. Follow-ups on an existing
+  project (`project`: its title or initiative id):
+  - `action: attach`, `target`: a director or actor reads the script and decides on their own terms
+    (the read, their standing versus yours, how busy they are). Studios that were interested read the
+    package again, and a greenlit package keeps its attached people.
+  - `action: revise`: a paid rewrite; interested studios read the new draft first.
+  A project in `turnaround` stays open and can be revived this way.
 
 Proposal types (interpersonal):
 - `relationship_shift`: `with`, `direction` (positive|negative), `severity` (minor|moderate|major), `cause`
