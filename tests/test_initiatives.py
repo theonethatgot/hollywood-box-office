@@ -76,8 +76,11 @@ def test_narrative_canon_persists_and_reaches_people_cards(tmp_path, cfg, params
 
 def test_narrative_about_unknown_person_warns(tmp_path, cfg, params):
     g = S.Game.new(tmp_path / "u.sqlite", params, cfg)
-    r = _reply(g, narrative=[{"text": "Lunch with an old friend.", "about": ["Gina Moretti-Zzyzx"]}])
+    stranger = max((p for p in g.state.people.values() if "director" in p.roles), key=lambda p: p.prestige)
+    r = _reply(g, narrative=[{"text": "Lunch with an old friend.", "about": ["Gina Moretti-Zzyzx"]},
+                             {"text": "He shoots long takes.", "about": [stranger.name]}])
     assert any("nobody" in w for w in r["warnings"])
+    assert any("no recorded contact" in w and stranger.name in w for w in r["warnings"])
 
 
 # --------------------------------------------------------- initiatives ---

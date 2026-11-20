@@ -578,7 +578,11 @@ def _develop_follow_up(st, cfg, item, g) -> dict:
     busy = sum(1 for c in person.calendar if c["end"] >= st.date)
     want = (read - 50) / 25 + (r.affinity / 30 if r else 0) - max(0.0, person.prestige - pl.prestige) / 30 \
         - max(0.0, person.fame - pl.fame) * 3 - 0.5 * busy + (person.goals.get("art", 0.2) - 0.2) * 2
+    rr = st.rel(pl.id, person.id)
+    rr.contact_weeks += 1
     if want > float(g.normal(0.4, 0.5)):
+        rr.affinity = round(clamp(rr.affinity + 3, -100, 100), 2)
+        rr.history.append({"date": st.date, "text": f"agreed to attach to your project '{data['title']}'", "delta": 3})
         data["attached"].append(person.id)
         data["pitched"] = [x for x in data["pitched"] if x not in data["interested"]]   # interested studios re-read
         ini["status"], ini["due"] = "pitching", add_days(st.date, 14)
@@ -589,6 +593,7 @@ def _develop_follow_up(st, cfg, item, g) -> dict:
                                          f"to the studios that were interested.", initiative=ini["id"])
     why = ("the script didn't grab them" if read < 50 else "they're committed elsewhere" if busy
            else "they want to see more traction first")
+    rr.history.append({"date": st.date, "text": f"read your script '{data['title']}' and passed ({why})", "delta": 0})
     _step(st, ini["id"], f"{person.name} passed on attaching ({why}).")
     return _ruling(item, "rejected", f"{person.name} passed: {why}.", initiative=ini["id"])
 

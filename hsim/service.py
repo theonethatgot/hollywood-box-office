@@ -148,6 +148,9 @@ def add_narrative(st: WorldState, item) -> list:
         obj, err = resolve(st, ref, "person")
         if obj:
             about.append(obj.id)
+            if obj.id != st.player_id and not _connected(st, obj.id):
+                warnings.append(f"narrative is about {obj.name}, whom the protagonist has no recorded contact with "
+                                f"or shared work; check it belongs in this story (kept as written).")
         else:
             warnings.append(f"narrative 'about' {err}")
     if not item.get("about"):
@@ -160,6 +163,17 @@ def add_narrative(st: WorldState, item) -> list:
     st.narrative.append({"date": st.date, "text": text, "about": about, "packet": st.packet_id,
                          "kind": str(item.get("kind", "detail"))[:30]})
     return warnings
+
+
+def _connected(st: WorldState, pid: str) -> bool:
+    r = st.rel(st.player_id, pid, create=False)
+    if r and (r.history or r.contact_weeks):
+        return True
+    for proj in st.projects.values():
+        ids = {st.roles[x].cast_id for x in proj.role_ids} | {proj.director_id}
+        if st.player_id in ids and pid in ids:
+            return True
+    return any(pid in j.get("colleagues", []) for j in st.market.get("jobs", []) if j["person"] == st.player_id)
 
 
 def note_warning(st: WorldState, text: str) -> str | None:
