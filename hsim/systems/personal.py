@@ -46,7 +46,7 @@ def ensure_attraction(st, cfg, r) -> None:
 
 
 def available_for_romance(p) -> bool:
-    return p.death is None and p.partner_status not in ("dating", "married", "married_offscreen")
+    return p.death is None and p.partner_status not in ("dating", "married", "married_offscreen", "partnered_offscreen")
 
 
 def allowed(cfg, p, category: str) -> bool:
@@ -66,7 +66,9 @@ def step(st: WorldState, cfg: dict) -> None:
 def _sparks(st, cfg) -> None:
     pc = cfg["personal"]
     seen = set()
-    for a_id, b_id, proj_id in st.market.get("contacts", []):
+    for entry in st.market.get("contacts", []):
+        a_id, b_id, proj_id = entry[0], entry[1], entry[2]
+        close = entry[3] if len(entry) > 3 else 0.5
         if (a_id, b_id) in seen:
             continue
         seen.add((a_id, b_id))
@@ -82,10 +84,11 @@ def _sparks(st, cfg) -> None:
             npc = b if a.controller == "player" else a
             att = r.attraction_ba if npc.id == r.b else r.attraction_ab
             # the player perceives signals, which are informative but imperfect
-            signal_p = pc["spark_base"] * (0.4 + 2.0 * att + 0.5 * npc.personality.get("openness", 50) / 100)
+            signal_p = pc["spark_base"] * close * (0.4 + 2.0 * att + 0.5 * npc.personality.get("openness", 50) / 100)
             if g.random() < signal_p and not any(d.kind == "romance" and d.status == "pending" and d.refs.get("person") == npc.id
                                                  for d in st.decisions.values()) and r.status != "ex":
-                where = (f"on the set of '{st.projects[proj_id].title}'" if proj_id in st.projects else
+                where = ((f"while rehearsing your scenes together on '{st.projects[proj_id].title}'" if close >= 0.8
+                          else f"on the set of '{st.projects[proj_id].title}'") if proj_id in st.projects else
                          "while you were spending time together" if proj_id == "social" else
                          "on the job you're working together")
                 st.log("chemistry", f"There is an unmistakable spark between you and {npc.name} {where}.",
@@ -99,7 +102,7 @@ def _sparks(st, cfg) -> None:
         if r.attraction_ab < thr or r.attraction_ba < thr:
             continue
         openness = (a.romance.get("openness", 0.5) + b.romance.get("openness", 0.5)) / 2
-        p = pc["spark_base"] * r.attraction_ab * r.attraction_ba * 2 * openness * (1 + max(0, r.affinity) / 100)
+        p = pc["spark_base"] * close * r.attraction_ab * r.attraction_ba * 2 * openness * (1 + max(0, r.affinity) / 100)
         if g.random() < p:
             _start_dating(st, cfg, r, a, b)
 
@@ -176,10 +179,14 @@ def _progress(st, cfg) -> None:
         g = R.stream(st.seed, "relationship", key, st.date)
         compat = 1 - abs(a.personality.get("temperament", 50) - b.personality.get("temperament", 50)) / 150
         apart = 1.4 if _working_apart(st, a, b) else 1.0
+        r.weeks_apart = (getattr(r, "weeks_apart", 0) + 1) if apart > 1 else max(0, getattr(r, "weeks_apart", 0) - 1)
+        documented = any(h.get("documented") for h in r.history)
+        shield = ((1 - pc["documented_protection"]) + pc["documented_protection"] * relational_strain(st, r, a, b)
+                  if documented else 1.0)
         if r.status == "dating":
             courted = (st.date >= _add_weeks(r.since, pc["min_courtship_weeks"])) if r.since else False
             if (courted and a.controller != "player" and b.controller != "player"
-                    and g.random() < pc["dating_to_marriage_weekly"] * compat * 2):
+                    and g.random() < pc["dating_to_marriage_weekly"] * compat * 2 * shield):
                 if allowed(cfg, a, "marriage") and allowed(cfg, b, "marriage"):
                     r.status = "married"
                     for x, y in ((a, b), (b, a)):
@@ -189,13 +196,10 @@ def _progress(st, cfg) -> None:
                     st.log("marriage", f"{a.name} and {b.name} married.", actors=[a.id, b.id],
                            salience=2 if famous else 0, public=famous)
                 continue
-            if g.random() < pc["breakup_weekly_base"] * (1.6 - compat) * apart and allowed(cfg, a, "breakup") and allowed(cfg, b, "breakup"):
+            if g.random() < pc["breakup_weekly_base"] * (1.6 - compat) * apart * shield and allowed(cfg, a, "breakup") and allowed(cfg, b, "breakup"):
                 _end(st, r, a, b, "breakup")
         else:
-            protect = r.history and any(h.get("documented") for h in r.history)
-            hz = pc["divorce_weekly_base"] * (1.6 - compat) * apart
-            if protect:
-                hz *= (1 - pc["documented_protection"]) + pc["documented_protection"] * max(_divergence(st, a), _divergence(st, b))
+            hz = pc["divorce_weekly_base"] * (1.6 - compat) * apart * shield
             if g.random() < hz and allowed(cfg, a, "breakup") and allowed(cfg, b, "breakup"):
                 _end(st, r, a, b, "divorce")
     # off-screen spouses of fictional NPCs can also end
@@ -203,6 +207,16 @@ def _progress(st, cfg) -> None:
         if p.partner_status == "married_offscreen" and not p.historical and p.controller != "player":
             if R.unit(st.seed, "offscreen-divorce", pid, st.date) < pc["divorce_weekly_base"] * 0.8:
                 p.partner_status = None
+
+
+def relational_strain(st, r, a, b) -> float:
+    """0..1: how much the couple's relationship has actually been strained IN THIS TIMELINE
+    (clashes and cooling recorded between them, long stretches working apart). Documented
+    relationships are protected unless strain exists; a divergent career alone is not a cause."""
+    base = next((h.get("delta", 10) for h in r.history if h.get("documented")), 10)
+    cooled = max(0.0, (base - r.affinity) / 40)
+    apart = min(1.0, r.__dict__.get("weeks_apart", 0) / 52) * 0.5
+    return min(1.0, cooled + apart)
 
 
 def _working_apart(st, a, b) -> bool:
@@ -250,6 +264,28 @@ def _documented_events(st, cfg) -> None:
                 why = "they never crossed paths in this timeline" if not ok else "they met through other channels"
             elif not free:
                 ok, why = False, "one of them was already committed elsewhere in this timeline"
+        elif kind == "relationship" and ev.type == "partnership":
+            a, b = people[0], people[1]
+            r = st.rel(a.id, b.id, create=False)
+            met = r is not None and (r.contact_weeks > 0 or any(h.get("documented") for h in r.history)) or dep.get("met_before_start")
+            free = all(p.partner_id in (None, q.id) and p.partner_status not in ("married", "married_offscreen")
+                       for p, q in ((a, b), (b, a)))
+            if not met:
+                ok = g.random() < dep.get("base_rate_if_never_met", 0.25)
+                why = "they never crossed paths in this timeline" if not ok else "they met through other channels"
+            elif not free:
+                ok, why = False, "one of them was already committed elsewhere in this timeline"
+        elif kind == "relationship" and ev.type == "separation":
+            a, b = people[0], people[1]
+            r = st.rel(a.id, b.id, create=False)
+            ok = r is not None and r.status == "dating"
+            why = "they were not together in this timeline" if not ok else "documented"
+        elif ev.type == "partnership_outside":
+            ok = people[0].partner_status is None
+            why = "documented (partner outside the simulated industry)" if ok else "already committed elsewhere in this timeline"
+        elif ev.type == "separation_outside":
+            ok = people[0].partner_status == "partnered_offscreen"
+            why = "documented" if ok else "not with that partner in this timeline"
         elif ev.type == "marriage_outside":
             p = people[0]
             ok = p.partner_status is None
@@ -294,6 +330,24 @@ def _apply_documented(st, cfg, ev, people) -> None:
         r.history.append({"date": st.date, "text": "married", "delta": 10, "documented": True})
         for x, y in ((a, b), (b, a)):
             x.partner_id, x.partner_status = y.id, "married"
+    elif ev.type == "partnership":
+        a, b = people
+        r = st.rel(a.id, b.id)
+        r.status, r.since = "dating", st.date
+        r.history.append({"date": st.date, "text": "in a relationship", "delta": 10, "documented": True})
+        for x, y in ((a, b), (b, a)):
+            x.partner_id, x.partner_status = y.id, "dating"
+    elif ev.type == "separation":
+        a, b = people
+        r = st.rel(a.id, b.id)
+        r.status = "ex"
+        r.history.append({"date": st.date, "text": "separated", "delta": -10, "documented": True})
+        for x in (a, b):
+            x.partner_id, x.partner_status = None, None
+    elif ev.type == "partnership_outside":
+        people[0].partner_status = "partnered_offscreen"
+    elif ev.type == "separation_outside":
+        people[0].partner_status = None
     elif ev.type == "marriage_outside":
         people[0].partner_status = "married_offscreen"
     elif ev.type == "divorce_outside":

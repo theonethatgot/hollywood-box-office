@@ -114,7 +114,7 @@ def build(st: WorldState, cfg: dict, packet_id: str) -> dict:
             "box_office_chart": _chart(st),
             "news": [_event_item(st, e) for e in world_items],
         },
-        "pending_decisions": [_decision(d) for d in D.pending(st)],
+        "pending_decisions": [_decision(d, st) for d in D.pending(st)],
         "continuity": _continuity(st, cfg),
         "era": _era(st, cfg),
         "narrator_notes": st.notes[-20:],
@@ -178,6 +178,8 @@ def _projects(st, cfg) -> list:
                 "location": p.location, "terms": money(r.fee) + (f" + {r.points:g} {r.points_type} points" if r.points_type else "")}
         if p.tone:
             item["identity"] = f"{p.tone} {p.genre}; {p.logline_extra}"
+        from ..world.story import packet_view
+        item["story"] = packet_view(st, p, r)
         if not p.historical_ref:
             item["provenance"] = "simulated production: not a real film; its cast and characters are part of this timeline"
         if p.historical_ref:
@@ -338,6 +340,8 @@ def _event_item(st, e, with_id=False) -> dict:
 
 
 def _relationship_status(st, p) -> str:
+    if p.partner_status == "partnered_offscreen":
+        return "in a relationship (partner outside the film industry)" + (" (documented)" if p.historical else "")
     if p.partner_status == "married_offscreen":
         return "married (spouse outside the film industry)" + (" (documented)" if p.historical and p.provenance.get("spouse_outside_world") else "")
     if p.partner_id in st.people:
@@ -477,9 +481,20 @@ def _chart(st) -> list:
             for i, x in enumerate(ch["top"][:5], 1)]
 
 
-def _decision(d) -> dict:
+def _decision(d, st=None) -> dict:
     out = {"id": d.id, "kind": d.kind, "summary": d.summary, "options": d.options, "deadline": d.deadline,
            "if_unanswered": d.default}
+    if st is not None and d.kind in ("offer", "audition"):
+        from ..world.story import packet_view
+        role = st.roles.get(d.refs.get("role")) or (st.roles.get(st.offers[d.refs["offer"]].role_id)
+                                                    if d.refs.get("offer") in st.offers else None)
+        if role:
+            v = packet_view(st, st.projects[role.project_id], role)
+            out["story_preview"] = {k: v[k] for k in ("provenance", "logline", "central_conflict", "your_character",
+                                                      "your_key_scenes", "your_read_of_the_script") if k in v}
+            mine = [c for c in v.get("characters", []) if c.startswith(role.name)]
+            if mine:
+                out["story_preview"]["your_character"] = mine[0]
     if d.refs.get("context"):
         out["context"] = d.refs["context"]
     return out

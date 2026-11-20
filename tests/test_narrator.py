@@ -109,3 +109,51 @@ def test_documented_independent_event_survives_divergence(cfg, params):
     st.hist_events[ev.id] = ev
     personal._documented_events(st, cfg)
     assert ev.status == "occurred" and a.death == st.date
+
+
+def test_continuity_isolated_between_saves(tmp_path, cfg, params):
+    """Notes, notes-derived continuity and events of one career never appear in another's packets."""
+    a = S.Game.new(tmp_path / "a.sqlite", params, cfg)
+    b = S.Game.new(tmp_path / "b.sqlite", {**params, "seed": 9,
+                                           "player": {**params["player"], "name": "Other Person"}}, cfg)
+    pa = a.command({"type": "packet"})["packet_id"]
+    a.command({"type": "submit", "block": {"reply_to": pa, "notes": ["Test Player keeps a parrot named Zanzibar."]}})
+    text_a = a.command({"type": "packet"})["text"]
+    text_b = b.command({"type": "packet"})["text"]
+    assert "Zanzibar" in text_a
+    assert "Zanzibar" not in text_b and "Test Player" not in text_b
+
+
+def test_note_about_unknown_person_warns(tmp_path, cfg, params):
+    g = S.Game.new(tmp_path / "w.sqlite", params, cfg)
+    pid = g.command({"type": "packet"})["packet_id"]
+    r = g.command({"type": "submit", "block": {"reply_to": pid,
+                                               "notes": ["Zebulon shares a Silver Lake apartment with Gina."]}})
+    assert r["warnings"] and "Zebulon" in r["warnings"][0]
+    pid = g.command({"type": "packet"})["packet_id"]
+    r = g.command({"type": "submit", "block": {"reply_to": pid, "notes": ["Test keeps a battered script on the dashboard."]}})
+    assert not r["warnings"]
+
+
+def test_story_profiles_for_fictional_and_real_films(cfg, params):
+    from hsim.world.story import ensure_story, packet_view
+    st = S.genesis_state(cfg, params)
+    fic = next(p for p in st.projects.values() if not p.historical_ref and p.role_ids)
+    st.roles[fic.role_ids[0]].cast_id = st.player_id
+    v = packet_view(st, fic, st.roles[fic.role_ids[0]])
+    assert v["provenance"].startswith("simulated screenplay") and v["beats"] and v["central_conflict"]
+    assert "may be wrong" in v["your_read_of_the_script"]
+    assert ensure_story(st, fic) is fic.story                     # persistent, generated once
+    real = next((p for p in st.projects.values() if p.historical_ref and p.role_ids), None)
+    if real is not None:
+        rv = packet_view(st, real, st.roles[real.role_ids[0]])
+        assert "beats" not in rv and "real film" in rv["provenance"]
+
+
+def test_personas_fit_professions(cfg, params):
+    from hsim.world.people import SIGNATURES_BY_ROLE
+    st = S.genesis_state(cfg, params)
+    for p in st.people.values():
+        for role in ("agent", "casting_director"):
+            if role in p.roles and p.persona.get("signature"):
+                assert p.persona["signature"] in SIGNATURES_BY_ROLE[role], (p.id, p.persona["signature"])

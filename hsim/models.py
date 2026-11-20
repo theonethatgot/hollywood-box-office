@@ -183,6 +183,7 @@ class Project:
     tone: str = ""                        # creative identity (e.g. "gritty", "glossy")
     logline_extra: str = ""               # selling point / context for the narrator
     casting_director_id: str | None = None
+    story: dict = field(default_factory=dict)        # film story profile (productions involving the protagonist)
 
 
 @dataclass
@@ -231,6 +232,7 @@ class Relationship:
     history: list = field(default_factory=list)      # [{date, text, delta}]
     contact_weeks: int = 0
     attraction_set: bool = False
+    weeks_apart: int = 0              # couples: recent weeks working on different productions
 
 
 @dataclass

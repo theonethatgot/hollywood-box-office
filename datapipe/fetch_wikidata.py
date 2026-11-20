@@ -172,6 +172,9 @@ BULK = {   # name: (subject variable, query template, chunk size)
   FILTER(CONTAINS(?awardLabel, "Academy Award") || CONTAINS(?awardLabel, "Golden Globe") ||
          CONTAINS(?awardLabel, "BAFTA") || CONTAINS(?awardLabel, "Emmy") || CONTAINS(?awardLabel, "Tony Award"))
   OPTIONAL {{ ?st pq:P585 ?date }} OPTIONAL {{ ?st pq:P1686 ?work }} }}""", 1000),
+    "partners": ("p", """SELECT ?p ?pt ?start ?end WHERE {{ VALUES ?p {{ {values} }}
+  ?p p:P451 ?st. ?st ps:P451 ?pt.
+  OPTIONAL {{ ?st pq:P580 ?start }} OPTIONAL {{ ?st pq:P582 ?end }} }}""", 1500),
     "labels": ("x", """SELECT ?x ?label WHERE {{ VALUES ?x {{ {values} }}
   ?x rdfs:label ?label FILTER(LANG(?label) = "en") }}""", 1500),
     "castroles": ("f", """SELECT ?f ?p ?charLabel ?charName WHERE {{ VALUES ?f {{ {values} }}
@@ -287,9 +290,9 @@ def run(y0: int, y1: int, statement_order: bool, workers: int, min_interval: flo
         ing.bulk(name, ids)
     people, refs = ing.people_of(ids)
     print(f"people: {len(people)}; referenced items: {len(refs)}", flush=True)
-    for name in ("people", "spouses", "honours"):
+    for name in ("people", "spouses", "honours", "partners"):
         ing.bulk(name, people)
-    spouses = {q(r["sp"]) for r in store.rows("spouses")}
+    spouses = {q(r["sp"]) for r in store.rows("spouses")} | {q(r["pt"]) for r in store.rows("partners")}
     ing.bulk("labels", set(refs) | spouses)
     # Wikidata increasingly stores names only as language-neutral "mul" labels
     ing.bulk("names", set(ids) | set(people) | set(refs) | spouses)
@@ -305,7 +308,7 @@ def run(y0: int, y1: int, statement_order: bool, workers: int, min_interval: flo
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--from-year", type=int, default=1975)
-    ap.add_argument("--to-year", type=int, default=1984)
+    ap.add_argument("--to-year", type=int, default=1989)
     ap.add_argument("--statement-order", action="store_true",
                     help="also fetch per-film entities for cast statement order (IMDb billing is the faster alternative)")
     ap.add_argument("--workers", type=int, default=4, help="concurrent EntityData requests (keep small)")

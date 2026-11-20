@@ -305,8 +305,7 @@ def load_historical(st: WorldState, cfg: dict, pack: dict) -> None:
                                   "kind": "prior"})
         best = max((c for c in p.credits if c["role"] != "director"), key=lambda c: (c["role"] == "lead", c["year"]),
                    default=None) or max((c for c in p.credits), key=lambda c: c["year"], default=None)
-        desc = rec.get("description") or ("director" if "director" in roles and "actor" not in roles else "actor")
-        p.bio = desc[0].upper() + desc[1:] + (f"; known for '{best['title']}' ({best['year']})" if best else "") + "."
+        p.bio = dated_bio(rec, roles, best, e, start)
         if p.credits:
             p.last_work = add_days(start, -120)
         archetype = ("star" if p.bankability > 55 else "notable" if p.fame > 0.05 else
@@ -322,8 +321,48 @@ def load_historical(st: WorldState, cfg: dict, pack: dict) -> None:
                             "tier_a": len(tier_a), "source": pack.get("source")}
 
 
+NATIONALITIES = {"American", "British", "English", "Scottish", "Welsh", "Irish", "Canadian", "Australian", "French",
+                 "Italian", "German", "Swiss", "Austrian", "Mexican", "Swedish", "Danish", "Norwegian", "Dutch",
+                 "Belgian", "Spanish", "Greek", "Polish", "Russian", "Soviet", "Japanese", "Chinese", "Indian", "Israeli",
+                 "Brazilian", "Argentine", "Cuban", "Hungarian", "Czech", "Jamaican", "Filipino", "Korean", "Finnish",
+                 "Icelandic", "Turkish", "Egyptian", "Lebanese", "Iranian", "Chilean", "Colombian", "Portuguese"}
+
+
+def dated_bio(rec: dict, roles: list, best: dict | None, e: dict, start: str) -> str:
+    """A biography using ONLY facts dated before the start: nationality (first word of the
+    description), profession from pre-start credits, birth year, best-known pre-start credit
+    and pre-start honours. Wikidata descriptions are written with hindsight (death years,
+    later careers), so their remainder is never shown."""
+    first = (rec.get("description") or "").split(" ")[0]
+    nat = first if first in NATIONALITIES else ""
+    acts = "actor" in roles
+    prof = "actor-director" if acts and "director" in roles else "actor" if acts else "film director"
+    if acts and rec.get("gender") == "f":
+        prof = prof.replace("actor", "actress")
+    born = rec["birth"][:4]
+    bits = [f"{nat + ' ' if nat else ''}{prof} (born {born})"]
+    if best:
+        bits.append(f"known for '{best['title']}' ({best['year']})")
+    pre = [h for h in rec.get("honours", []) if h.get("date") and h["date"] < start]
+    oscar_win = any("academy award" in h["award"].lower() and h["result"] == "won" for h in pre)
+    oscar_nom = any("academy award" in h["award"].lower() for h in pre)
+    if oscar_win:
+        bits.append("Academy Award winner")
+    elif oscar_nom:
+        bits.append("Academy Award nominee")
+    elif any("golden globe" in h["award"].lower() or "emmy" in h["award"].lower() for h in pre):
+        bits.append("award-nominated")
+    text = "; ".join(bits)
+    return text[0].upper() + text[1:] + "."
+
+
 def _premise_text(f: dict, genre: str) -> str:
-    t = (f.get("description") or f"{genre} film").strip().rstrip(".")
+    """Film descriptions are only used if they say nothing dated after the release year."""
+    import re
+    t = (f.get("description") or "").strip().rstrip(".")
+    ry = int(f["date"][:4])
+    if not t or "released in" in t or any(int(y) > ry for y in re.findall(r"\b(19\d\d|20\d\d)\b", t)):
+        t = f"{ry} {genre} film"
     return t[0].upper() + t[1:] + "."
 
 
@@ -435,11 +474,54 @@ def _documented_relationships(st, cfg, pack, in_world, credits) -> None:
                        {"kind": "relationship" if other_in else "independent", "met_before_start": met,
                         "base_rate_if_never_met": cfg["history"]["marriage_base_rate_if_never_met"]})
                 n += 1
+        _documented_partnerships(st, cfg, pack, pid, me, in_world, coworkers, name_of, start, end)
         dd = pack["people"][pid].get("death")
         if dd and start < dd <= end:
             manner = set(pack["people"][pid].get("manner_of_death", []))
             kind = "circumstance" if manner & NON_NATURAL else "independent"
             _event(st, [me.id], "death", dd, f"{me.name} died.", {"kind": kind})
+
+
+def _documented_partnerships(st, cfg, pack, pid, me, in_world, coworkers, name_of, start, end) -> None:
+    """Documented unmarried partnerships (Wikidata P451). Undated ones are skipped (they can't be
+    placed in time). If records overlap at the start, the most recently begun one is current."""
+    partners = [x for x in pack["people"][pid].get("partners", []) if x.get("start")]
+    ongoing = [x for x in partners if x["start"] <= start and (not x.get("end") or x["end"] > start)]
+    married = me.partner_status in ("married", "married_offscreen")
+    if ongoing and not married:
+        cur = max(ongoing, key=lambda x: (x["start"], x["id"]))
+        other = cur["id"]
+        if other in in_world:
+            you = st.people[f"wd:{other}"]
+            if you.partner_status not in ("married", "married_offscreen") and you.partner_id in (None, me.id):
+                r = st.rel(me.id, you.id)
+                if not any(h.get("documented") for h in r.history):
+                    r.status, r.since = "dating", cur["start"]
+                    r.history.append({"date": cur["start"], "text": "in a relationship", "delta": 10,
+                                      "documented": True})
+                for x, y in ((me, you), (you, me)):
+                    x.partner_id, x.partner_status = y.id, "dating"
+        elif me.partner_status is None:
+            me.partner_status = "partnered_offscreen"
+            me.provenance["partner_outside_world"] = name_of(other) or "undocumented name"
+    for x in partners:
+        other = x["id"]
+        other_in = other in in_world
+        if not (pid < other or not other_in):
+            continue                                   # each in-world pair handled once
+        nm = name_of(other)
+        if start < x["start"] <= end:
+            met = (min(pid, other), max(pid, other)) in coworkers
+            _event(st, [me.id] + ([f"wd:{other}"] if other_in else []),
+                   "partnership" if other_in else "partnership_outside", x["start"],
+                   f"{me.name} and {nm} began a relationship." if nm else f"{me.name} began a relationship.",
+                   {"kind": "relationship" if other_in else "independent", "met_before_start": met,
+                    "base_rate_if_never_met": cfg["history"]["marriage_base_rate_if_never_met"]})
+        if x.get("end") and start < x["end"] <= end:
+            _event(st, [me.id] + ([f"wd:{other}"] if other_in else []),
+                   "separation" if other_in else "separation_outside", x["end"],
+                   f"{me.name} and {nm} separated." if nm else f"{me.name}'s relationship ended.",
+                   {"kind": "relationship" if other_in else "independent"})
 
 
 def _event(st, people, etype, date, summary, dep) -> None:

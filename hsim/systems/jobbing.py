@@ -215,7 +215,9 @@ def settle(st: WorldState, cfg: dict) -> None:
                         r.history.append({"date": st.date, "text": f"worked together on {j['name']}", "delta": 1,
                                           "job": j["id"]})
                         r.affinity = round(clamp(r.affinity + 2, -100, 100), 2)
-                    st.market.setdefault("contacts", []).append([r.a, r.b, j["id"]])
+                    st.market.setdefault("contacts", []).append(
+                        [r.a, r.b, j["id"], {"stage": 0.8, "tv_movie": 0.6, "tv_guest": 0.45, "film_bit": 0.25,
+                                             "commercial": 0.3}.get(j["kind"], 0.4)])
         if j["end"] > st.date:
             keep.append(j)
             continue

@@ -110,23 +110,75 @@ def _shoot_week(st, cfg, p) -> None:
         x.energy = clamp(x.energy - pc["energy_cost_per_week"])
     for i, a in enumerate(people):
         for b in people[i + 1:]:
+            close = closeness(st, p, a, b)
             r = st.rel(a.id, b.id)
             r.contact_weeks += 1
-            st.market["contacts"].append([r.a, r.b, p.id])
+            st.market["contacts"].append([r.a, r.b, p.id, close])
             temper = (a.personality.get("temperament", 50) + b.personality.get("temperament", 50)) / 200
             ego = (a.personality.get("ego", 50) + b.personality.get("ego", 50)) / 200
-            pc_conf = pc["conflict_base"] * (0.5 + temper + ego) * (1.3 - (r.affinity + 100) / 250)
+            cause, pressure = clash_cause(st, p, a, b, director, overrun)
+            pc_conf = (pc["conflict_base"] * close * (0.5 + temper + ego) * (1 + pressure)
+                       * (1.3 - (r.affinity + 100) / 250))
             if g.random() < pc_conf:
                 delta = -float(g.uniform(4, 14))
                 r.affinity = clamp(r.affinity + delta, -100, 100)
-                r.history.append({"date": st.date, "text": f"clashed on the set of '{p.title}'", "delta": round(delta, 1)})
+                r.history.append({"date": st.date, "text": f"clashed on the set of '{p.title}' ({cause})",
+                                  "delta": round(delta, 1)})
                 if a.controller == "player" or b.controller == "player":
                     other = b if a.controller == "player" else a
-                    st.log("set_conflict", f"Tension on the set of '{p.title}': you clashed with {other.name}.",
+                    st.log("set_conflict", f"Tension on the set of '{p.title}': you clashed with {other.name} ({cause}).",
                            actors=[a.id, b.id], refs={"project": p.id}, salience=3, public=False)
             else:
                 warmth = (a.personality.get("warmth", 50) + b.personality.get("warmth", 50)) / 100
-                r.affinity = clamp(r.affinity + pc["bond_gain"] * warmth * float(g.uniform(0.3, 1.0)), -100, 100)
+                r.affinity = clamp(r.affinity + pc["bond_gain"] * warmth * close * float(g.uniform(0.3, 1.0)), -100, 100)
+
+
+IMPORTANCE_CLOSE = {"lead": 1.0, "colead": 0.85, "supporting": 0.5, "featured": 0.15}
+
+
+def role_in(st, p, person_id):
+    for rid in p.role_ids:
+        if st.roles[rid].cast_id == person_id:
+            return st.roles[rid]
+    return None
+
+
+def closeness(st, p, a, b) -> float:
+    """How much two people actually work together on this production (shared scenes,
+    director-actor time). Story links between characters (film story profiles) count most."""
+    if p.director_id in (a.id, b.id):
+        actor = b if a.id == p.director_id else a
+        r = role_in(st, p, actor.id)
+        return IMPORTANCE_CLOSE.get(r.importance, 0.3) if r else 0.3
+    ra, rb = role_in(st, p, a.id), role_in(st, p, b.id)
+    if not ra or not rb:
+        return 0.2
+    links = (p.story or {}).get("links", {})
+    if links.get(f"{ra.id}|{rb.id}") or links.get(f"{rb.id}|{ra.id}"):
+        return 1.0
+    return round(min(IMPORTANCE_CLOSE[ra.importance], IMPORTANCE_CLOSE[rb.importance]) * 0.9, 2)
+
+
+def clash_cause(st, p, a, b, director, overrun) -> tuple:
+    """The circumstance behind friction on set, and how much pressure it adds."""
+    ra, rb = role_in(st, p, a.id), role_in(st, p, b.id)
+    egos = (a.personality.get("ego", 50), b.personality.get("ego", 50))
+    if ra and rb and ra.importance in ("lead", "colead") and rb.importance in ("lead", "colead") and min(egos) > 58:
+        return "rivalry over screen time and billing", 0.8
+    if director and director.id in (a.id, b.id):
+        actor = b if a.id == director.id else a
+        if director.direction.get("vision", 50) > 60 and actor.personality.get("ego", 50) > 55:
+            return "a creative disagreement over how to play a scene", 0.6
+        if director.direction.get("discipline", 50) > 60 and actor.personality.get("discipline", 50) < 40:
+            return "the director lost patience with lateness and unprepared takes", 0.6
+    if overrun > 0.01:
+        return "pressure from a slipping schedule boiled over", 0.5
+    if min(a.energy, b.energy) < 40:
+        return "exhaustion after long days", 0.4
+    temper = (a.personality.get("temperament", 50) + b.personality.get("temperament", 50)) / 2
+    if temper >= 60:
+        return "a clash of two volatile temperaments", 0.2
+    return "a disagreement that got heated", -0.75    # without a real circumstance, friction is rare
 
 
 def wrap(st: WorldState, cfg: dict, p, quiet: bool = False) -> None:

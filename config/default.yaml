@@ -195,6 +195,7 @@ tv:
 
 social:
   player_weekly: 0.22              # chance per week of an ordinary encounter with someone you know
+  contacts_for_full_social_life: 6 # fewer real connections means proportionally fewer encounters
   premiere_invite_weekly: 0.06
   npc_friend_weekly: 0.03
 

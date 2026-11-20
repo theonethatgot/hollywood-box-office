@@ -289,6 +289,8 @@ def _npc_wants_audition(st, cfg, proj, role, p) -> bool:
 
 
 def _invite_player(st, cfg, proj, role, p) -> None:
+    from ..world.story import ensure_story
+    ensure_story(st, proj)
     studio = st.studios[proj.studio_id].name
     director = st.people[proj.director_id].name if proj.director_id else "TBD"
     cd = st.people.get(proj.casting_director_id) if proj.casting_director_id else None
@@ -426,6 +428,8 @@ def _offer_terms(off: M.Offer) -> str:
 
 
 def _offer_to_player(st, cfg, proj, role, off: M.Offer, path: str) -> None:
+    from ..world.story import ensure_story
+    ensure_story(st, proj)
     p = st.player
     o = st.orders
     studio = st.studios[proj.studio_id].name

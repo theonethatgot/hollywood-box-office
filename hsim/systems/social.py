@@ -40,11 +40,17 @@ def _player_encounters(st, cfg, sc) -> None:
     p = st.player
     if not p:
         return
-    contacts = _known(st, p.id, min_affinity=-5)
+    def established(other_id, r):
+        """Catch-ups need a real connection: worked together, genuine goodwill, or your own agent."""
+        worked = any("worked together" in h["text"] or "clashed on the set" in h["text"] or "rehears" in h["text"]
+                     for h in r.history) or r.contact_weeks >= 2
+        return "agent" in st.people[other_id].roles or worked or r.affinity >= 8
+    contacts = [(o, r) for o, r in _known(st, p.id, min_affinity=-5) if established(o, r)]
     if not contacts:
         return
     sociability = 0.5 + p.personality.get("openness", 50) / 100
-    if R.unit(st.seed, "social-week", p.id, st.date) > sc["player_weekly"] * sociability:
+    breadth = min(1.0, len(contacts) / sc["contacts_for_full_social_life"])    # fewer friends, fewer outings
+    if R.unit(st.seed, "social-week", p.id, st.date) > sc["player_weekly"] * sociability * breadth:
         return
     def access(other):            # a working actor doesn't casually socialise with stars they met once
         gap = st.people[other].fame - p.fame
@@ -82,7 +88,22 @@ def _premieres(st, cfg, sc) -> None:
         return
     if R.unit(st.seed, "premiere", p.id, st.date) > sc["premiere_invite_weekly"] * (1 + p.fame * 10):
         return
-    film = opening[int(R.unit(st.seed, "premiere-film", p.id, st.date) * len(opening))]
+    reasons = []
+    for q in opening:
+        crew = [st.roles[x].cast_id for x in q.role_ids if st.roles[x].cast_id] + ([q.director_id] if q.director_id else [])
+        clients = [c for c in crew if st.people[c].agent_id == p.agent_id and c != p.id]
+        friends = [c for c in crew if (rr := st.rel(p.id, c, create=False)) and rr.affinity >= 5]
+        worked_for = any(c.get("project_id") in st.projects and st.projects[c["project_id"]].studio_id == q.studio_id
+                         for c in p.credits)
+        if friends:
+            reasons.append((q, f"{st.people[friends[0]].name}, whom you know, got you on the list"))
+        elif clients:
+            reasons.append((q, f"your agency represents {len(clients)} of the film's cast"))
+        elif worked_for:
+            reasons.append((q, f"you've worked for {st.studios[q.studio_id].name}"))
+    if not reasons:
+        return
+    film, why = reasons[int(R.unit(st.seed, "premiere-film", p.id, st.date) * len(reasons))]
     cast = [st.roles[x].cast_id for x in film.role_ids if st.roles[x].cast_id] + ([film.director_id] if film.director_id else [])
     met = []
     for c in cast[:3]:
@@ -94,7 +115,7 @@ def _premieres(st, cfg, sc) -> None:
             r.affinity = round(clamp(r.affinity + 2, -100, 100), 2)
             r.history.append({"date": st.date, "text": f"met at the premiere of '{film.title}'", "delta": 2})
             met.append(st.people[c].name)
-    text = f"Your agency got you into the premiere of '{film.title}'"
+    text = f"You were invited to the premiere of '{film.title}' ({why})"
     st.log("premiere", text + (f", where you met {', '.join(met)}." if met else "."),
            actors=[p.id] + cast[:3], refs={"project": film.id}, salience=1, public=False)
 

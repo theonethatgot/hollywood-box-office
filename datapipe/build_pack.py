@@ -202,6 +202,14 @@ def build(y0: int, y1: int) -> dict:
                   "end": _iso(r["end"]) if r.get("end") else None}
             if sp not in people[pid]["spouses"]:
                 people[pid]["spouses"].append(sp)
+    for r in rows("partners"):
+        pid = qid(r["p"])
+        if pid in people:
+            pt = {"id": qid(r["pt"]), "start": _iso(r["start"]) if r.get("start") else None,
+                  "end": _iso(r["end"]) if r.get("end") else None}
+            lst = people[pid].setdefault("partners", [])
+            if pt not in lst:
+                lst.append(pt)
     for r in rows("honours"):
         pid = qid(r["p"])
         if pid in people:
@@ -209,10 +217,14 @@ def build(y0: int, y1: int) -> dict:
                  "for": qid(r["work"]) if r.get("work") else None}
             if h not in people[pid]["honours"]:
                 people[pid]["honours"].append(h)
+    spouse_names = {}
     for p in people.values():
         p["spouses"].sort(key=lambda s: (s["start"] or "", s["id"]))
+        p.setdefault("partners", []).sort(key=lambda s: (s["start"] or "", s["id"]))
+        for sp in p["partners"]:
+            if sp["id"] not in people and sp["id"] in labels:
+                spouse_names[sp["id"]] = labels[sp["id"]]
         p["honours"].sort(key=lambda h: (h["date"] or "", h["award"]))
-    spouse_names = {}
     for p in people.values():
         for sp in p["spouses"]:
             if sp["id"] not in people and sp["id"] in labels:
@@ -225,7 +237,7 @@ def build(y0: int, y1: int) -> dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--from-year", type=int, default=1975)
-    ap.add_argument("--to-year", type=int, default=1984)
+    ap.add_argument("--to-year", type=int, default=1989)
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     pack = build(a.from_year, a.to_year)

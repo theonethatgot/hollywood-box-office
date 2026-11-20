@@ -163,6 +163,8 @@ def submit(save, reply_file, force):
         raise click.ClickException(r["message"])
     for t in r["applied"]:
         click.echo(f"  decision: {t}")
+    for w in r.get("warnings", []):
+        click.secho(f"  warning: {w}", fg="yellow")
     for e in r["errors"]:
         click.secho(f"  error: {e}", fg="red")
     for ru in r["rulings"]:

@@ -91,16 +91,34 @@ def submit_reply(st: WorldState, cfg: dict, block: dict, force: bool = False) ->
             continue
         ruling = ADJ.adjudicate(st, cfg, prop, i)
         st.rulings.append(ruling)
+    warnings = []
     for note in block.get("notes", []):
-        st.notes.append({"date": st.date, "text": str(note)[:300]})
+        text = str(note)[:300]
+        w = note_warning(st, text)
+        if w:
+            warnings.append(w)
+        st.notes.append({"date": st.date, "text": text})
     st.applied_replies.append(h)
-    out = {"status": "applied", "applied": applied, "errors": errors,
+    out = {"status": "applied", "applied": applied, "errors": errors, "warnings": warnings,
            "rulings": [r for r in st.rulings if r["type"] != "decision"]}
     adv = block.get("advance")
     if isinstance(adv, dict) and (adv.get("weeks") or adv.get("until")):
         until = adv.get("until") or add_weeks(st.date, int(adv["weeks"]))
         out["advance"] = T.advance(st, cfg, str(until))
     return out
+
+
+def note_warning(st: WorldState, text: str) -> str | None:
+    """Catch notes that belong to a different career (e.g. pasted from another chat): the note's
+    subject is a capitalised name that matches nobody in this world."""
+    first = text.split()[0].strip(".,'\"’s") if text.split() else ""
+    if not first[:1].isupper() or first.lower() in ("the", "a", "an", "her", "his", "their", "my", "your", "you"):
+        return None
+    known = {p.name.split()[0] for p in st.people.values()} | {w for p in st.people.values() for w in p.name.split()}
+    if first in known:
+        return None
+    return (f"note begins with '{first}', who is not anyone in this world (protagonist: {st.player.name}). "
+            f"If it belongs to another career, rewind or ignore it.")
 
 
 # --------------------------------------------------------------- Game ---

@@ -88,3 +88,12 @@ def test_studio_mapping_and_genres():
     assert H.studio_of({"distributors": ["Some Unknown Co."], "companies": []}) == "st-ind"
     assert H.genre_of(["science fiction film", "action film"]) == "scifi"
     assert H.genre_of(["romantic comedy"]) == "romance"
+
+
+def test_biographies_contain_no_future_information():
+    pack = copy.deepcopy(_pack())
+    pack["people"]["QA"]["description"] = "American actor and later governor (1945–2006)"
+    st = _world(pack)
+    bio = st.people["wd:QA"].bio
+    assert "2006" not in bio and "governor" not in bio
+    assert bio.startswith("American actor (born 1945)")

@@ -23,6 +23,20 @@ TRAINING = ["trained at a New York acting studio", "came up through Chicago impr
 HOMETOWNS = ["Brooklyn", "Chicago", "Dallas", "a small town in Ohio", "Boston", "New Orleans", "Philadelphia",
              "San Francisco", "rural Georgia", "Detroit", "Phoenix", "Seattle", "Toronto", "London", "Miami",
              "the San Fernando Valley", "Pittsburgh", "Minneapolis", "Kansas City", "Baltimore"]
+SIGNATURES_BY_ROLE = {
+    "agent": ["never without two phone lines going at once", "takes every call from the car on the 405",
+              "sends a handwritten note after every meeting", "keeps a card file on every casting assistant in town",
+              "lunches at the same corner table every Friday", "can recite every client's last three quotes",
+              "reads the trades cover to cover before 7 a.m.", "famous for never letting a client hear 'no' secondhand"],
+    "casting_director": ["keeps index cards on every actor she's ever seen", "runs sessions exactly on time",
+                         "remembers monologues from auditions years ago", "always asks one unexpected question in the room",
+                         "scouts small theatres every weekend", "keeps a jar of lemon drops on the casting table"],
+    "producer": ["watches the budget like a hawk", "lives on the phone to the network", "never misses a dailies screening",
+                 "keeps a whiteboard of every episode's status", "is famous for last-minute rewrites"],
+    "director": ["storyboards every shot", "shoots dozens of takes until it feels true", "lets actors improvise on the day",
+                 "never raises their voice on set", "rehearses for a week before the cameras roll",
+                 "insists on shooting on location", "edits in their head while shooting", "obsessive about lighting"],
+}
 SIGNATURES = ["keeps a battered notebook of character ideas", "famous for practical jokes on set",
               "never eats before a performance", "quotes Brando at every opportunity",
               "always first to arrive and last to leave", "carries a thermos of terrible coffee everywhere",
@@ -97,7 +111,9 @@ def give_persona(st: WorldState, p: M.Person, key: str) -> None:
     if p.historical:
         p.persona = {"source": "documented record; personality and ambition are simulation characterisation"}
         return
-    persona = {"hometown": _pick(g, HOMETOWNS), "signature": _pick(g, SIGNATURES)}
+    pool = next((SIGNATURES_BY_ROLE[r] for r in ("director", "producer", "casting_director", "agent")
+                 if r in p.roles and "actor" not in p.roles), SIGNATURES)
+    persona = {"hometown": _pick(g, HOMETOWNS), "signature": _pick(g, pool)}
     if "actor" in p.roles:
         persona["background"] = _pick(g, TRAINING)
     p.persona = persona
@@ -126,7 +142,7 @@ def make_agents(st: WorldState, cfg: dict) -> None:
             g = R.stream(st.seed, "agent-person", aid, i)
             p = _person(st, g, f"{aid}-{i}", "agent", aid, 26, 62, female_share=0.35)
             p.persona = {"style": _pick(g, AGENT_STYLES), "hometown": _pick(g, HOMETOWNS),
-                         "signature": _pick(g, SIGNATURES)}
+                         "signature": _pick(g, SIGNATURES_BY_ROLE["agent"])}
             p.bio = f"Agent at {ag.name}; {p.persona['style']}."
             p.direction = {"hustle": round(clamp(ag.hustle + g.normal(0, 10)), 1)}
             st.people[p.id] = p
@@ -170,7 +186,8 @@ def make_casting_directors(st: WorldState, cfg: dict) -> None:
 def _make_cd(st, key, employer) -> None:
     g = R.stream(st.seed, "cd-person", key)
     p = _person(st, g, key, "casting_director", employer, 30, 66, female_share=0.7)   # the field skewed female
-    p.persona = {"style": _pick(g, CD_STYLES), "hometown": _pick(g, HOMETOWNS)}
+    p.persona = {"style": _pick(g, CD_STYLES), "hometown": _pick(g, HOMETOWNS),
+                 "signature": _pick(g, SIGNATURES_BY_ROLE["casting_director"])}
     where = st.studios[employer].name if employer in st.studios else "an independent casting office"
     p.bio = f"Casting director ({where}); {p.persona['style']}."
     st.people[p.id] = p
